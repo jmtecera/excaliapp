@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/room/:code",
+      "destination": "/index.html"
+    }
+  ]
+}
