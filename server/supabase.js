@@ -1,8 +1,11 @@
 const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_SERVER_KEY =
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "";
 
 export function isSupabaseConfigured() {
-  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(SUPABASE_URL && SUPABASE_SERVER_KEY);
 }
 
 export async function createRoom(payload) {
@@ -54,18 +57,17 @@ async function callRpc(name, payload) {
 
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: "POST",
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "content-type": "application/json",
-    },
+    headers: buildSupabaseHeaders(),
     body: JSON.stringify({ payload }),
   });
   const rawResponse = await response.text();
   const data = parseJson(rawResponse);
 
   if (!response.ok) {
-    const error = createHttpError(mapSupabaseStatus(response.status), data?.message || data?.error || "Supabase request failed.");
+    const error = createHttpError(
+      mapSupabaseStatus(response.status, data),
+      getSupabaseErrorMessage(data),
+    );
     error.details = data;
     throw error;
   }
@@ -95,7 +97,32 @@ function normalizeSupabaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/g, "");
 }
 
-function mapSupabaseStatus(status) {
+function buildSupabaseHeaders() {
+  const headers = {
+    apikey: SUPABASE_SERVER_KEY,
+    "content-type": "application/json",
+  };
+
+  if (!SUPABASE_SERVER_KEY.startsWith("sb_secret_")) {
+    headers.authorization = `Bearer ${SUPABASE_SERVER_KEY}`;
+  }
+
+  return headers;
+}
+
+function getSupabaseErrorMessage(data) {
+  if (data?.code === "PGRST202" || String(data?.message || "").includes("schema cache")) {
+    return "The Excaliapp database migration is missing. Apply the Supabase migrations with `pnpm db:push`, then redeploy.";
+  }
+
+  return data?.message || data?.error || "Supabase request failed.";
+}
+
+function mapSupabaseStatus(status, data) {
+  if (data?.code === "PGRST202") {
+    return 503;
+  }
+
   if (status === 401 || status === 403) {
     return 403;
   }

@@ -5,8 +5,8 @@ A minimal shared room manager for Excalidraw boards. The frontend is Solid, Vite
 ## Local development
 
 1. Copy `.env.example` to `.env`.
-2. Apply `supabase/migrations/20260609000000_shared_board_rooms.sql` to your Supabase project.
-3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env`.
+2. Set `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `POSTGRES_URL_NON_POOLING` in `.env`.
+3. Run `pnpm db:push` to apply the database migrations.
 4. Run `pnpm dev:api` and `pnpm dev` in separate terminals.
 
 Vite proxies `/api` to the local API server on port `8787`.
@@ -16,6 +16,24 @@ Vite proxies `/api` to the local API server on port `8787`.
 Set these server-side environment variables in Vercel:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SECRET_KEY` (recommended) or `SUPABASE_SERVICE_ROLE_KEY`
 
-Do not prefix the service-role key with `VITE_`; it must never be included in the browser bundle. `VITE_API_BASE_URL` is optional and should normally remain empty so the frontend uses the same-origin Vercel functions.
+The database schema is deployed separately from Vercel. Before using the production app, pull the Vercel development environment or set `POSTGRES_URL_NON_POOLING` locally and run:
+
+```sh
+pnpm db:push
+```
+
+For a linked Vercel project, the production variables can be used without writing them to disk:
+
+```sh
+pnpm dlx vercel@latest env run -e production -- pnpm db:push
+```
+
+`POSTGRES_URL_NON_POOLING` is needed only while applying migrations; the running Vercel API uses `SUPABASE_URL` and its server secret.
+
+Do not prefix database URLs, secret keys, or service-role keys with `VITE_`; those values must never be included in the browser bundle. The frontend does not need a Supabase key. `VITE_API_BASE_URL` is optional and should normally remain empty so it uses the same-origin Vercel functions.
+
+## Missing RPC or schema cache
+
+If Supabase reports that it cannot find `public.create_excalidraw_room(payload)`, the migration has not been applied to that project. Run `pnpm db:push`. The final migration also asks PostgREST to reload its schema cache.

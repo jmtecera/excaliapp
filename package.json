@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "db:push": "node scripts/push-migrations.mjs",
     "dev": "vite",
     "dev:api": "node server/sync-server.js",
     "preview": "vite preview",
