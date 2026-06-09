@@ -1,0 +1,22 @@
+{
+  "name": "excalidraw-room-manager",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "type": "module",
+  "scripts": {
+    "check": "pnpm web:typecheck && node scripts/check-project.mjs",
+    "deploy:edge": "node scripts/deploy-edge-function.mjs",
+    "package": "pnpm package:extensions && pnpm package:web",
+    "package:all": "pnpm package",
+    "package:chrome": "node scripts/package-extensions.mjs chrome",
+    "package:extensions": "node scripts/package-extensions.mjs all",
+    "package:extension": "node scripts/package-extensions.mjs all",
+    "package:firefox": "node scripts/package-extensions.mjs firefox",
+    "package:web": "node scripts/package-web.mjs",
+    "web:build": "pnpm --dir apps/web build",
+    "web:dev": "pnpm --dir apps/web dev",
+    "web:preview": "pnpm --dir apps/web preview",
+    "web:typecheck": "pnpm --dir apps/web typecheck"
+  }
+}

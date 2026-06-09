@@ -1,0 +1,9 @@
+.env
+.codex
+.vercel
+node_modules/
+dist/
+apps/web/dist/
+*.zip
+*.crx
+.DS_Store
