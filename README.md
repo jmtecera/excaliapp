@@ -32,7 +32,9 @@ pnpm dlx vercel@latest env run -e production -- pnpm db:push
 
 `POSTGRES_URL_NON_POOLING` is needed only while applying migrations; the running Vercel API uses `SUPABASE_URL` and its server secret.
 
-Do not prefix database URLs, secret keys, or service-role keys with `VITE_`; those values must never be included in the browser bundle. The frontend does not need a Supabase key. `VITE_API_BASE_URL` is optional and should normally remain empty so it uses the same-origin Vercel functions.
+Do not prefix database URLs, secret keys, or service-role keys with `VITE_`; those values must never be included in the browser bundle. Realtime uses only `VITE_PUBLIC_SUPABASE_URL` and the Supabase publishable key. `VITE_API_BASE_URL` is optional and should normally remain empty so it uses the same-origin Vercel functions.
+
+Production Vercel builds run pending migrations automatically when one of the supported Postgres URLs is configured.
 
 ## Missing RPC or schema cache
 

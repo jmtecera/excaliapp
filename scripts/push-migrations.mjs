@@ -26,6 +26,7 @@ const result = spawnSync(
     "--db-url",
     databaseUrl,
     "--include-all",
+    "--yes",
   ],
   {
     cwd: process.cwd(),

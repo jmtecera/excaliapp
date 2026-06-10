@@ -1,8 +1,10 @@
 import { randomBase64Url } from "./encoding";
 import { text } from "./i18n";
-import type { DeviceType, Workspace, WorkspaceMember } from "./types";
+import type { DeviceType, PomodoroStatus, Workspace, WorkspaceMember } from "./types";
 
 const ROOM_CODE_PATTERN = /^[A-Z]{3}-[A-Z]{3}$/;
+const DEFAULT_POMODORO_SECONDS = 25 * 60;
+const MAX_POMODORO_SECONDS = 120 * 60;
 
 export const DEFAULT_ROOM_NAME = text.defaultRoomName;
 
@@ -11,6 +13,12 @@ export function emptyWorkspace(): Workspace {
 }
 
 export function normalizeWorkspace(workspace: Partial<Workspace> | Record<string, unknown>): Workspace {
+  const pomodoroDurationSeconds =
+    typeof workspace.pomodoroDurationSeconds === "number" &&
+    Number.isFinite(workspace.pomodoroDurationSeconds)
+      ? Math.max(60, Math.min(MAX_POMODORO_SECONDS, Math.round(workspace.pomodoroDurationSeconds)))
+      : DEFAULT_POMODORO_SECONDS;
+
   return {
     roomId: typeof workspace.roomId === "string" ? workspace.roomId : "",
     roomCode: normalizeRoomCode(typeof workspace.roomCode === "string" ? workspace.roomCode : ""),
@@ -18,6 +26,32 @@ export function normalizeWorkspace(workspace: Partial<Workspace> | Record<string
     roomNameUpdatedAt:
       typeof workspace.roomNameUpdatedAt === "number" && workspace.roomNameUpdatedAt > 0
         ? workspace.roomNameUpdatedAt
+        : 0,
+    accessToken: typeof workspace.accessToken === "string" ? workspace.accessToken : "",
+    pinEnabled: workspace.pinEnabled === true,
+    pomodoroStatus: normalizePomodoroStatus(workspace.pomodoroStatus),
+    pomodoroDurationSeconds,
+    pomodoroEndsAt:
+      typeof workspace.pomodoroEndsAt === "number" && workspace.pomodoroEndsAt > 0
+        ? workspace.pomodoroEndsAt
+        : null,
+    pomodoroStartedAt:
+      typeof workspace.pomodoroStartedAt === "number" && workspace.pomodoroStartedAt > 0
+        ? workspace.pomodoroStartedAt
+        : null,
+    pomodoroRemainingSeconds:
+      typeof workspace.pomodoroRemainingSeconds === "number" &&
+      Number.isFinite(workspace.pomodoroRemainingSeconds)
+        ? Math.max(0, Math.min(MAX_POMODORO_SECONDS, Math.round(workspace.pomodoroRemainingSeconds)))
+        : pomodoroDurationSeconds,
+    pomodoroAccumulatedSeconds:
+      typeof workspace.pomodoroAccumulatedSeconds === "number" &&
+      Number.isFinite(workspace.pomodoroAccumulatedSeconds)
+        ? Math.max(0, Math.round(workspace.pomodoroAccumulatedSeconds))
+        : 0,
+    pomodoroUpdatedAt:
+      typeof workspace.pomodoroUpdatedAt === "number" && workspace.pomodoroUpdatedAt > 0
+        ? workspace.pomodoroUpdatedAt
         : 0,
     memberName: normalizeMemberName(typeof workspace.memberName === "string" ? workspace.memberName : ""),
     memberEmail: normalizeEmail(typeof workspace.memberEmail === "string" ? workspace.memberEmail : ""),
@@ -123,4 +157,8 @@ export function isWorkspaceSyncReady(workspace: Workspace): boolean {
 
 function normalizeDevice(device: unknown): DeviceType {
   return device === "mobile" || device === "tablet" ? device : "desktop";
+}
+
+function normalizePomodoroStatus(status: unknown): PomodoroStatus {
+  return status === "running" || status === "paused" ? status : "idle";
 }

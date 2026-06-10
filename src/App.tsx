@@ -1,19 +1,36 @@
-import { Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import {
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
+  untrack,
+} from "solid-js";
 import { LandingPage } from "./components/LandingPage";
+import { PinPrompt } from "./components/PinPrompt";
 import { RoomPage } from "./components/RoomPage";
 import { writeClipboard } from "./format";
 import { locale, text } from "./i18n";
+import { subscribeToRoom } from "./realtime";
 import { createRoomRecord, createRoomRecordFromUrl, generateCollaborationLinkData, sortRooms } from "./room";
 import {
   clearCurrentRoom,
-  loadRecentRoomCodes,
+  loadRecentRooms,
   loadRoomRecords,
   loadWorkspace,
   saveRoomRecords,
   saveWorkspace,
 } from "./storage";
-import { createSharedRoom, syncWorkspace as syncRemoteWorkspace } from "./sync";
-import type { RoomRecord, Workspace, WorkspaceMember } from "./types";
+import {
+  RoomPinRequiredError,
+  authorizeRoom,
+  createSharedRoom,
+  syncWorkspace as syncRemoteWorkspace,
+  updateRoomPin,
+  updateRoomPomodoro,
+} from "./sync";
+import type { PomodoroAction, RecentRoom, RoomRecord, Workspace, WorkspaceMember } from "./types";
 import {
   DEFAULT_ROOM_NAME,
   detectDevice,
@@ -26,32 +43,85 @@ import {
   requireRoomName,
 } from "./workspace";
 
-const AUTO_REFRESH_MS = 30000;
+const AUTO_REFRESH_MS = 15000;
 const PRESENCE_WINDOW_MS = 90000;
+const REALTIME_DEBOUNCE_MS = 100;
+
+type PendingJoin = {
+  workspace: Workspace;
+  rooms: RoomRecord[];
+};
 
 export function App() {
   const initialRouteCode = getRouteRoomCode();
   const loadedWorkspace = loadWorkspace();
-  const [workspace, setWorkspace] = createSignal<Workspace>(
+  const loadedRecentRooms = loadRecentRooms();
+  const rememberedRoute = loadedRecentRooms.find((room) => room.code === initialRouteCode);
+  const initialWorkspace =
     initialRouteCode && loadedWorkspace.roomCode !== initialRouteCode
-      ? normalizeWorkspace({ ...loadedWorkspace, roomCode: initialRouteCode, roomId: "", roomName: DEFAULT_ROOM_NAME })
-      : loadedWorkspace,
-  );
+      ? normalizeWorkspace({
+          ...loadedWorkspace,
+          roomCode: initialRouteCode,
+          roomId: "",
+          roomName: rememberedRoute?.name || DEFAULT_ROOM_NAME,
+          accessToken: rememberedRoute?.accessToken || "",
+          pinEnabled: Boolean(rememberedRoute?.accessToken),
+        })
+      : loadedWorkspace;
+  const [workspace, setWorkspace] = createSignal<Workspace>(initialWorkspace);
   const [boards, setBoards] = createSignal<RoomRecord[]>(
     initialRouteCode && loadedWorkspace.roomCode !== initialRouteCode ? [] : loadRoomRecords(),
   );
-  const [recentCodes, setRecentCodes] = createSignal(loadRecentRoomCodes());
+  const [recentRooms, setRecentRooms] = createSignal(loadedRecentRooms);
   const [routeCode, setRouteCode] = createSignal(initialRouteCode);
+  const [realtimeMembers, setRealtimeMembers] = createSignal<WorkspaceMember[]>([]);
+  const [pendingJoin, setPendingJoin] = createSignal<PendingJoin | null>(null);
   const [now, setNow] = createSignal(Date.now());
   const [syncBusy, setSyncBusy] = createSignal(false);
   const [toast, setToast] = createSignal("");
   let toastTimeout = 0;
+  let realtimeSyncTimeout = 0;
   let syncQueued = false;
 
   const inRoom = createMemo(
-    () => hasWorkspace(workspace()) && Boolean(workspace().memberName) && routeCode() === workspace().roomCode,
+    () =>
+      hasWorkspace(workspace()) &&
+      Boolean(workspace().roomId) &&
+      Boolean(workspace().memberName) &&
+      routeCode() === workspace().roomCode,
   );
-  const visibleMembers = createMemo(() => getVisibleMembers(workspace(), now()));
+  const visibleMembers = createMemo(() =>
+    getVisibleMembers(workspace(), realtimeMembers(), now()),
+  );
+  const realtimeKey = createMemo(() => {
+    const current = workspace();
+    return inRoom()
+      ? [
+          current.roomId,
+          current.clientId,
+          current.memberName,
+          current.memberEmail,
+          current.device,
+        ].join("|")
+      : "";
+  });
+
+  createEffect(() => {
+    const key = realtimeKey();
+
+    if (!key) {
+      setRealtimeMembers([]);
+      return;
+    }
+
+    const current = untrack(workspace);
+    const unsubscribe = subscribeToRoom({
+      workspace: current,
+      onChanged: queueRealtimeSync,
+      onPresence: setRealtimeMembers,
+    });
+    onCleanup(unsubscribe);
+  });
 
   onMount(() => {
     document.documentElement.lang = locale;
@@ -66,8 +136,10 @@ export function App() {
       void syncRoom({ silent: true });
     }
 
-    const interval = window.setInterval(() => {
+    const clockInterval = window.setInterval(() => {
       setNow(Date.now());
+    }, 1000);
+    const syncInterval = window.setInterval(() => {
       if (inRoom()) void syncRoom({ silent: true });
     }, AUTO_REFRESH_MS);
     const handleVisibility = () => {
@@ -79,7 +151,7 @@ export function App() {
     const handleStorage = () => {
       setWorkspace(loadWorkspace());
       setBoards(loadRoomRecords());
-      setRecentCodes(loadRecentRoomCodes());
+      setRecentRooms(loadRecentRooms());
     };
     const handlePopState = () => setRouteCode(getRouteRoomCode());
 
@@ -89,7 +161,9 @@ export function App() {
     window.addEventListener("popstate", handlePopState);
 
     onCleanup(() => {
-      window.clearInterval(interval);
+      window.clearInterval(clockInterval);
+      window.clearInterval(syncInterval);
+      window.clearTimeout(realtimeSyncTimeout);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("storage", handleStorage);
@@ -102,17 +176,16 @@ export function App() {
 
     try {
       const memberName = requireMemberName(details.name);
-      const memberEmail = workspace().memberEmail;
       const createdWorkspace = await createSharedRoom({
         roomName: DEFAULT_ROOM_NAME,
         memberName,
-        memberEmail,
+        memberEmail: workspace().memberEmail,
         clientId: workspace().clientId,
         device: detectDevice(),
       });
       updateBoards([]);
       updateWorkspace(createdWorkspace);
-      setRecentCodes(loadRecentRoomCodes());
+      refreshRecentRooms();
       showToast(text.toast.roomCreated);
       return createdWorkspace.roomCode;
     } catch (error) {
@@ -125,26 +198,72 @@ export function App() {
 
   async function handleJoinRoom(details: { code: string; name: string }) {
     try {
-      const candidate = normalizeWorkspace({
-        ...workspace(),
-        roomId: "",
-        roomCode: requireRoomCode(details.code),
-        roomName: DEFAULT_ROOM_NAME,
-        roomNameUpdatedAt: 0,
-        memberName: requireMemberName(details.name),
-        memberEmail: workspace().memberEmail,
-        device: detectDevice(),
-        members: [],
-        lastSyncAt: null,
-        lastError: "",
+      const code = requireRoomCode(details.code);
+      const remembered = recentRooms().find((room) => room.code === code);
+      const candidate = createJoinWorkspace({
+        code,
+        name: details.name,
+        accessToken: remembered?.accessToken || "",
+        roomName: remembered?.name || DEFAULT_ROOM_NAME,
       });
-      setSyncBusy(true);
+      await joinWorkspace(candidate);
+    } catch (error) {
+      showToast(getErrorMessage(error, text.error.joinRoom));
+    }
+  }
+
+  async function handleRecentJoin(room: RecentRoom, name: string) {
+    try {
+      const candidate = createJoinWorkspace({
+        code: room.code,
+        name,
+        accessToken: room.accessToken,
+        roomName: room.name,
+      });
+      await joinWorkspace(candidate);
+    } catch (error) {
+      showToast(getErrorMessage(error, text.error.joinRoom));
+    }
+  }
+
+  async function joinWorkspace(candidate: Workspace) {
+    setSyncBusy(true);
+
+    try {
       const result = await syncRemoteWorkspace({ workspace: candidate, rooms: [] });
-      updateBoards(result.rooms);
-      updateWorkspace(result.workspace);
-      setRecentCodes(loadRecentRoomCodes());
-      navigateToRoom(result.workspace.roomCode);
-      showToast(text.toast.roomJoined);
+      completeJoin(result.workspace, result.rooms);
+    } catch (error) {
+      if (error instanceof RoomPinRequiredError) {
+        setPendingJoin({ workspace: { ...candidate, accessToken: "" }, rooms: [] });
+      } else {
+        showToast(getErrorMessage(error, text.error.joinRoom));
+      }
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handlePinSubmit(pin: string) {
+    const pending = pendingJoin();
+
+    if (!pending) {
+      return;
+    }
+
+    setSyncBusy(true);
+
+    try {
+      const authorization = await authorizeRoom(pending.workspace.roomCode, pin);
+      const authorizedWorkspace = normalizeWorkspace({
+        ...pending.workspace,
+        ...authorization,
+      });
+      const result = await syncRemoteWorkspace({
+        workspace: authorizedWorkspace,
+        rooms: pending.rooms,
+      });
+      setPendingJoin(null);
+      completeJoin(result.workspace, result.rooms);
     } catch (error) {
       showToast(getErrorMessage(error, text.error.joinRoom));
     } finally {
@@ -152,7 +271,54 @@ export function App() {
     }
   }
 
+  function handlePinCancel() {
+    const pending = pendingJoin();
+    setPendingJoin(null);
+
+    if (pending?.workspace.roomId && pending.workspace.roomId === workspace().roomId) {
+      handleLeaveRoom();
+    }
+  }
+
+  function completeJoin(nextWorkspace: Workspace, nextBoards: RoomRecord[]) {
+    updateBoards(nextBoards);
+    updateWorkspace(nextWorkspace);
+    refreshRecentRooms();
+    navigateToRoom(nextWorkspace.roomCode);
+    showToast(text.toast.roomJoined);
+  }
+
+  function createJoinWorkspace({
+    code,
+    name,
+    accessToken,
+    roomName,
+  }: {
+    code: string;
+    name: string;
+    accessToken: string;
+    roomName: string;
+  }): Workspace {
+    return normalizeWorkspace({
+      ...workspace(),
+      roomId: "",
+      roomCode: code,
+      roomName,
+      roomNameUpdatedAt: 0,
+      accessToken,
+      pinEnabled: Boolean(accessToken),
+      memberName: requireMemberName(name),
+      memberEmail: workspace().memberEmail,
+      device: detectDevice(),
+      members: [],
+      lastSyncAt: null,
+      lastError: "",
+    });
+  }
+
   function handleLeaveRoom() {
+    setPendingJoin(null);
+    setRealtimeMembers([]);
     updateBoards([]);
     updateWorkspace(clearCurrentRoom());
     navigate("/");
@@ -186,13 +352,91 @@ export function App() {
     }
   }
 
+  async function handleUpdatePin(pin: string | null) {
+    if (pin !== null && !/^[0-9]{4}$/.test(pin)) {
+      showToast(text.error.pinFormat);
+      return;
+    }
+
+    setSyncBusy(true);
+
+    try {
+      const wasEnabled = workspace().pinEnabled;
+      const result = await updateRoomPin({
+        roomCode: workspace().roomCode,
+        accessToken: workspace().accessToken,
+        pin,
+      });
+      updateWorkspace({ ...workspace(), ...result });
+      showToast(
+        result.pinEnabled
+          ? wasEnabled
+            ? text.toast.pinChanged
+            : text.toast.pinEnabled
+          : text.toast.pinDisabled,
+      );
+      void syncRoom({ silent: true });
+    } catch (error) {
+      if (error instanceof RoomPinRequiredError) {
+        setPendingJoin({ workspace: { ...workspace(), accessToken: "" }, rooms: boards() });
+      }
+      showToast(getErrorMessage(error, text.error.pinUpdate));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function handlePomodoroAction(action: PomodoroAction, durationMinutes?: number) {
+    setSyncBusy(true);
+
+    try {
+      const result = await updateRoomPomodoro({
+        roomCode: workspace().roomCode,
+        accessToken: workspace().accessToken,
+        action,
+        durationMinutes,
+      });
+      updateWorkspace({
+        ...workspace(),
+        pomodoroStatus: result.pomodoroStatus || workspace().pomodoroStatus,
+        pomodoroDurationSeconds:
+          typeof result.pomodoroDurationSeconds === "number"
+            ? result.pomodoroDurationSeconds
+            : workspace().pomodoroDurationSeconds,
+        pomodoroEndsAt:
+          typeof result.pomodoroEndsAt === "number" ? result.pomodoroEndsAt : null,
+        pomodoroStartedAt:
+          typeof result.pomodoroStartedAt === "number" ? result.pomodoroStartedAt : null,
+        pomodoroRemainingSeconds:
+          typeof result.pomodoroRemainingSeconds === "number"
+            ? result.pomodoroRemainingSeconds
+            : workspace().pomodoroRemainingSeconds,
+        pomodoroAccumulatedSeconds:
+          typeof result.pomodoroAccumulatedSeconds === "number"
+            ? result.pomodoroAccumulatedSeconds
+            : workspace().pomodoroAccumulatedSeconds,
+        pomodoroUpdatedAt:
+          typeof result.pomodoroUpdatedAt === "number"
+            ? result.pomodoroUpdatedAt
+            : workspace().pomodoroUpdatedAt,
+      });
+    } catch (error) {
+      if (error instanceof RoomPinRequiredError) {
+        setPendingJoin({ workspace: { ...workspace(), accessToken: "" }, rooms: boards() });
+      }
+      showToast(getErrorMessage(error, text.error.timerUpdate));
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
   async function handleCreateBoard(name: string) {
     try {
       const roomData = await generateCollaborationLinkData();
       const board = createRoomRecord({ ...roomData, name });
       updateBoards([board, ...boards()]);
-      await syncRoom({ silent: true });
       window.open(board.excalidrawUrl, "_blank", "noopener,noreferrer");
+      void syncRoom({ silent: true });
       showToast(text.toast.boardCreated);
     } catch (error) {
       showToast(getErrorMessage(error, text.error.createBoard));
@@ -203,7 +447,7 @@ export function App() {
     try {
       const board = createRoomRecordFromUrl({ name: details.name, url: details.url });
       updateBoards([board, ...boards()]);
-      await syncRoom({ silent: true });
+      void syncRoom({ silent: true });
       showToast(text.toast.boardAdded);
     } catch (error) {
       showToast(getErrorMessage(error, text.error.addBoard));
@@ -212,6 +456,19 @@ export function App() {
 
   function handleImportBoards(importedBoards: RoomRecord[]) {
     updateBoards(sortRooms([...importedBoards, ...boards()]));
+    void syncRoom({ silent: true });
+  }
+
+  function handleOpenBoard(board: RoomRecord) {
+    window.open(board.excalidrawUrl, "_blank", "noopener,noreferrer");
+    const timestamp = Date.now();
+    updateBoards(
+      boards().map((candidate) =>
+        candidate.id === board.id
+          ? { ...candidate, lastOpenedAt: timestamp, updatedAt: timestamp }
+          : candidate,
+      ),
+    );
     void syncRoom({ silent: true });
   }
 
@@ -260,6 +517,11 @@ export function App() {
       updateWorkspace(result.workspace);
       if (!silent) showToast(text.toast.roomRefreshed);
     } catch (error) {
+      if (error instanceof RoomPinRequiredError) {
+        setPendingJoin({ workspace: { ...workspace(), accessToken: "" }, rooms: boards() });
+        return;
+      }
+
       updateWorkspace({
         ...workspace(),
         lastError: getErrorMessage(error, text.error.sync),
@@ -275,6 +537,13 @@ export function App() {
     }
   }
 
+  function queueRealtimeSync() {
+    window.clearTimeout(realtimeSyncTimeout);
+    realtimeSyncTimeout = window.setTimeout(() => {
+      if (inRoom()) void syncRoom({ silent: true });
+    }, REALTIME_DEBOUNCE_MS);
+  }
+
   function updateWorkspace(nextWorkspace: Workspace) {
     const saved = saveWorkspace(normalizeWorkspace(nextWorkspace));
     setWorkspace(saved);
@@ -283,6 +552,10 @@ export function App() {
 
   function updateBoards(nextBoards: RoomRecord[]) {
     setBoards(saveRoomRecords(nextBoards));
+  }
+
+  function refreshRecentRooms() {
+    setRecentRooms(loadRecentRooms());
   }
 
   function navigateToRoom(code: string) {
@@ -307,10 +580,11 @@ export function App() {
         fallback={
           <LandingPage
             workspace={workspace()}
-            recentCodes={recentCodes()}
+            recentRooms={recentRooms()}
             initialCode={routeCode()}
             busy={syncBusy()}
             onJoin={handleJoinRoom}
+            onRecentJoin={handleRecentJoin}
             onCreate={handleCreateRoom}
             onOpenGenerated={navigateToRoom}
           />
@@ -327,12 +601,18 @@ export function App() {
             void writeClipboard(workspace().roomCode);
             showToast(text.toast.roomCodeCopied);
           }}
+          onCopyInvite={() => {
+            void writeClipboard(new URL(`/room/${workspace().roomCode}`, window.location.origin).toString());
+            showToast(text.toast.inviteCopied);
+          }}
           onRenameRoom={handleRenameRoom}
           onUpdateProfile={handleUpdateProfile}
+          onUpdatePin={handleUpdatePin}
+          onPomodoroAction={handlePomodoroAction}
           onCreateBoard={handleCreateBoard}
           onAddBoard={handleAddBoard}
           onImportBoards={handleImportBoards}
-          onOpenBoard={(board) => window.open(board.excalidrawUrl, "_blank", "noopener,noreferrer")}
+          onOpenBoard={handleOpenBoard}
           onCopyBoard={(board) => {
             void writeClipboard(board.excalidrawUrl);
             showToast(text.toast.boardLinkCopied);
@@ -342,9 +622,13 @@ export function App() {
         />
       </Show>
 
+      <Show when={pendingJoin()}>
+        <PinPrompt busy={syncBusy()} onSubmit={handlePinSubmit} onCancel={handlePinCancel} />
+      </Show>
+
       <Show when={toast()}>
         <div
-          class="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl"
+          class="fixed bottom-5 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-border bg-foreground px-4 py-2 text-xs font-medium text-background shadow-xl"
           role="status"
           aria-live="polite"
         >
@@ -355,8 +639,21 @@ export function App() {
   );
 }
 
-function getVisibleMembers(workspace: Workspace, now: number): WorkspaceMember[] {
-  const members = [...workspace.members];
+function getVisibleMembers(
+  workspace: Workspace,
+  realtimeMembers: WorkspaceMember[],
+  now: number,
+): WorkspaceMember[] {
+  const members = new Map<string, WorkspaceMember>();
+
+  for (const member of workspace.members) {
+    members.set(member.clientId, member);
+  }
+
+  for (const member of realtimeMembers) {
+    members.set(member.clientId, member);
+  }
+
   const self: WorkspaceMember = {
     clientId: workspace.clientId,
     name: workspace.memberName,
@@ -364,17 +661,18 @@ function getVisibleMembers(workspace: Workspace, now: number): WorkspaceMember[]
     device: workspace.device,
     lastSeenAt: now,
   };
-  const selfIndex = members.findIndex((member) => member.clientId === self.clientId);
 
-  if (selfIndex >= 0) {
-    members[selfIndex] = self;
-  } else if (self.name) {
-    members.unshift(self);
+  if (self.name) {
+    members.set(self.clientId, self);
   }
 
-  return members
+  return [...members.values()]
     .filter((member) => member.name && member.lastSeenAt && now - member.lastSeenAt < PRESENCE_WINDOW_MS)
-    .sort((left, right) => Number(right.lastSeenAt) - Number(left.lastSeenAt));
+    .sort((left, right) => {
+      if (left.clientId === workspace.clientId) return -1;
+      if (right.clientId === workspace.clientId) return 1;
+      return Number(right.lastSeenAt) - Number(left.lastSeenAt);
+    });
 }
 
 function getRouteRoomCode(): string {

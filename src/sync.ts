@@ -1,6 +1,6 @@
 import { mergeRoomRecordLists } from "./room";
 import { normalizeMember, normalizeRoomCode, normalizeRoomName, normalizeWorkspace } from "./workspace";
-import type { RoomRecord, SyncPayload, Workspace, WorkspaceMember } from "./types";
+import type { PomodoroAction, RoomRecord, SyncPayload, Workspace, WorkspaceMember } from "./types";
 
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 
@@ -42,6 +42,7 @@ export async function syncWorkspace({
     body: JSON.stringify({
       roomName: workspace.roomName,
       roomNameUpdatedAt: workspace.roomNameUpdatedAt,
+      accessToken: workspace.accessToken,
       clientId: workspace.clientId,
       memberName: workspace.memberName,
       memberEmail: workspace.memberEmail,
@@ -49,6 +50,11 @@ export async function syncWorkspace({
       boards: rooms,
     }),
   });
+
+  if (payload.pinRequired) {
+    throw new RoomPinRequiredError(workspace.roomCode);
+  }
+
   const nextRooms = Array.isArray(payload.boards) ? mergeRoomRecordLists(rooms, payload.boards) : rooms;
 
   return {
@@ -63,6 +69,38 @@ export async function syncWorkspace({
         typeof payload.roomNameUpdatedAt === "number" && payload.roomNameUpdatedAt > 0
           ? payload.roomNameUpdatedAt
           : workspace.roomNameUpdatedAt,
+      accessToken:
+        typeof payload.accessToken === "string" ? payload.accessToken : workspace.accessToken,
+      pinEnabled: payload.pinEnabled === true,
+      pomodoroStatus: payload.pomodoroStatus || workspace.pomodoroStatus,
+      pomodoroDurationSeconds:
+        typeof payload.pomodoroDurationSeconds === "number"
+          ? payload.pomodoroDurationSeconds
+          : workspace.pomodoroDurationSeconds,
+      pomodoroEndsAt:
+        payload.pomodoroEndsAt === null
+          ? null
+          : typeof payload.pomodoroEndsAt === "number"
+            ? payload.pomodoroEndsAt
+            : workspace.pomodoroEndsAt,
+      pomodoroStartedAt:
+        payload.pomodoroStartedAt === null
+          ? null
+          : typeof payload.pomodoroStartedAt === "number"
+            ? payload.pomodoroStartedAt
+            : workspace.pomodoroStartedAt,
+      pomodoroRemainingSeconds:
+        typeof payload.pomodoroRemainingSeconds === "number"
+          ? payload.pomodoroRemainingSeconds
+          : workspace.pomodoroRemainingSeconds,
+      pomodoroAccumulatedSeconds:
+        typeof payload.pomodoroAccumulatedSeconds === "number"
+          ? payload.pomodoroAccumulatedSeconds
+          : workspace.pomodoroAccumulatedSeconds,
+      pomodoroUpdatedAt:
+        typeof payload.pomodoroUpdatedAt === "number"
+          ? payload.pomodoroUpdatedAt
+          : workspace.pomodoroUpdatedAt,
       members: Array.isArray(payload.members)
         ? payload.members.map(normalizeMember).filter((member): member is WorkspaceMember => Boolean(member))
         : workspace.members,
@@ -70,6 +108,64 @@ export async function syncWorkspace({
       lastError: "",
     }),
   };
+}
+
+export async function authorizeRoom(roomCode: string, pin: string): Promise<{
+  accessToken: string;
+  pinEnabled: boolean;
+}> {
+  return request(`/api/rooms/${normalizeRoomCode(roomCode)}/authorize`, {
+    method: "POST",
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export async function updateRoomPin({
+  roomCode,
+  accessToken,
+  pin,
+}: {
+  roomCode: string;
+  accessToken: string;
+  pin: string | null;
+}): Promise<{ accessToken: string; pinEnabled: boolean }> {
+  return request(`/api/rooms/${normalizeRoomCode(roomCode)}/pin`, {
+    method: "POST",
+    body: JSON.stringify({ accessToken, pin }),
+  });
+}
+
+export async function updateRoomPomodoro({
+  roomCode,
+  accessToken,
+  action,
+  durationMinutes,
+}: {
+  roomCode: string;
+  accessToken: string;
+  action: PomodoroAction;
+  durationMinutes?: number;
+}): Promise<SyncPayload> {
+  const payload = await request<SyncPayload>(`/api/rooms/${normalizeRoomCode(roomCode)}/timer`, {
+    method: "POST",
+    body: JSON.stringify({ accessToken, action, durationMinutes }),
+  });
+
+  if (payload.pinRequired) {
+    throw new RoomPinRequiredError(roomCode);
+  }
+
+  return payload;
+}
+
+export class RoomPinRequiredError extends Error {
+  roomCode: string;
+
+  constructor(roomCode: string) {
+    super("Room PIN required.");
+    this.name = "RoomPinRequiredError";
+    this.roomCode = roomCode;
+  }
 }
 
 async function request<T>(path: string, init: RequestInit): Promise<T> {

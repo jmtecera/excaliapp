@@ -1,6 +1,6 @@
 import { normalizeRoomRecord, sortRooms } from "./room";
 import { emptyWorkspace, normalizeRoomCode, normalizeWorkspace } from "./workspace";
-import type { RoomRecord, Workspace } from "./types";
+import type { RecentRoom, RoomRecord, Workspace } from "./types";
 
 const ROOM_STORAGE_KEY = "excalidrawWebRooms";
 const WORKSPACE_STORAGE_KEY = "excalidrawWebWorkspace";
@@ -16,7 +16,12 @@ export function saveWorkspace(workspace: Workspace): Workspace {
   writeStorage(WORKSPACE_STORAGE_KEY, normalizedWorkspace);
 
   if (normalizedWorkspace.roomCode) {
-    saveRecentRoomCode(normalizedWorkspace.roomCode);
+    saveRecentRoom({
+      code: normalizedWorkspace.roomCode,
+      name: normalizedWorkspace.roomName,
+      accessToken: normalizedWorkspace.accessToken,
+      lastVisitedAt: Date.now(),
+    });
   }
 
   return normalizedWorkspace;
@@ -38,14 +43,49 @@ export function saveRoomRecords(rooms: RoomRecord[]): RoomRecord[] {
   return normalizedRooms;
 }
 
-export function loadRecentRoomCodes(): string[] {
-  const codes = readStorage(RECENT_ROOMS_STORAGE_KEY, []);
-  return Array.isArray(codes)
-    ? codes
-        .map(normalizeRoomCode)
-        .filter((code, index, values) => code.length === 7 && values.indexOf(code) === index)
-        .slice(0, 4)
-    : [];
+export function loadRecentRooms(): RecentRoom[] {
+  const storedRooms = readStorage(RECENT_ROOMS_STORAGE_KEY, []);
+
+  if (!Array.isArray(storedRooms)) {
+    return [];
+  }
+
+  const rooms = storedRooms
+    .map((room): RecentRoom | null => {
+      if (typeof room === "string") {
+        const code = normalizeRoomCode(room);
+        return code.length === 7
+          ? { code, name: code, accessToken: "", lastVisitedAt: 0 }
+          : null;
+      }
+
+      if (!room || typeof room !== "object") {
+        return null;
+      }
+
+      const candidate = room as Partial<RecentRoom>;
+      const code = normalizeRoomCode(candidate.code);
+
+      if (code.length !== 7) {
+        return null;
+      }
+
+      return {
+        code,
+        name: String(candidate.name || code).trim().slice(0, 80) || code,
+        accessToken: typeof candidate.accessToken === "string" ? candidate.accessToken : "",
+        lastVisitedAt:
+          typeof candidate.lastVisitedAt === "number" && candidate.lastVisitedAt > 0
+            ? candidate.lastVisitedAt
+            : 0,
+      };
+    })
+    .filter((room): room is RecentRoom => Boolean(room));
+
+  return rooms
+    .filter((room, index) => rooms.findIndex((candidate) => candidate.code === room.code) === index)
+    .sort((left, right) => right.lastVisitedAt - left.lastVisitedAt)
+    .slice(0, 4);
 }
 
 export function clearCurrentRoom(): Workspace {
@@ -63,11 +103,11 @@ export function clearCurrentRoom(): Workspace {
   return saveWorkspace(preservedWorkspace);
 }
 
-function saveRecentRoomCode(code: string): void {
-  const nextCodes = [normalizeRoomCode(code), ...loadRecentRoomCodes()].filter(
-    (value, index, values) => value && values.indexOf(value) === index,
+function saveRecentRoom(room: RecentRoom): void {
+  const nextRooms = [room, ...loadRecentRooms()].filter(
+    (value, index, values) => value.code && values.findIndex((candidate) => candidate.code === value.code) === index,
   );
-  writeStorage(RECENT_ROOMS_STORAGE_KEY, nextCodes.slice(0, 4));
+  writeStorage(RECENT_ROOMS_STORAGE_KEY, nextRooms.slice(0, 4));
 }
 
 function readStorage(key: string, fallback: unknown): unknown {

@@ -1,7 +1,7 @@
 import { ArrowRight, Clock3, Plus } from "lucide-solid";
 import { For, Index, Show, createSignal } from "solid-js";
 import { text } from "../i18n";
-import type { Workspace } from "../types";
+import type { RecentRoom, Workspace } from "../types";
 import { normalizeRoomCode } from "../workspace";
 import { BrandMark } from "./BrandMark";
 import { Button } from "./ui/button";
@@ -9,10 +9,11 @@ import { Input } from "./ui/input";
 
 type LandingPageProps = {
   workspace: Workspace;
-  recentCodes: string[];
+  recentRooms: RecentRoom[];
   initialCode: string;
   busy: boolean;
   onJoin: (details: { code: string; name: string }) => Promise<void>;
+  onRecentJoin: (room: RecentRoom, name: string) => Promise<void>;
   onCreate: (details: { name: string }) => Promise<string>;
   onOpenGenerated: (code: string) => void;
 };
@@ -84,7 +85,25 @@ export function LandingPage(props: LandingPageProps) {
                 maxlength={60}
                 aria-label={text.landing.name}
               />
-              <div class="mt-2 flex gap-2">
+
+              <Button
+                class="mt-2 w-full"
+                size="lg"
+                type="button"
+                disabled={unavailable()}
+                onClick={() => void generateRoom()}
+              >
+                <Plus class={`size-4 ${generating() ? "animate-pulse" : ""}`} />
+                {generating() ? text.landing.generating : text.landing.generate}
+              </Button>
+
+              <div class="my-3 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                <span class="h-px flex-1 bg-border" />
+                - {text.landing.or} -
+                <span class="h-px flex-1 bg-border" />
+              </div>
+
+              <div class="flex gap-2">
                 <Show
                   when={generating()}
                   fallback={
@@ -133,39 +152,27 @@ export function LandingPage(props: LandingPageProps) {
               </div>
             </div>
 
-            <div class="my-6 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              <span class="h-px flex-1 bg-border" />
-              {text.landing.or}
-              <span class="h-px flex-1 bg-border" />
-            </div>
-
-            <Button
-              class="w-full"
-              variant="secondary"
-              size="lg"
-              type="button"
-              disabled={unavailable()}
-              onClick={() => void generateRoom()}
-            >
-              <Plus class={`size-4 ${generating() ? "animate-pulse" : ""}`} />
-              {generating() ? text.landing.generating : text.landing.generate}
-            </Button>
-
-            <Show when={props.recentCodes.length > 0}>
+            <Show when={props.recentRooms.length > 0}>
               <div class="mt-7 border-t border-border pt-5">
                 <div class="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Clock3 class="size-3.5" />
                   {text.landing.recent}
                 </div>
-                <div class="flex flex-wrap gap-2">
-                  <For each={props.recentCodes}>
-                    {(code) => (
+                <div class="grid gap-2">
+                  <For each={props.recentRooms}>
+                    {(room) => (
                       <button
                         type="button"
-                        class="rounded-md border border-border bg-background px-3 py-1.5 font-mono text-xs font-semibold tracking-[0.14em] text-foreground transition hover:bg-muted"
-                        onClick={() => setRoomCode(code)}
+                        class="group flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2.5 text-left transition hover:bg-muted"
+                        onClick={() => void props.onRecentJoin(room, name())}
                       >
-                        {code}
+                        <span class="min-w-0">
+                          <span class="block truncate text-sm font-medium">{room.name}</span>
+                          <span class="mt-0.5 block font-mono text-[10px] font-semibold tracking-[0.16em] text-muted-foreground">
+                            {room.code}
+                          </span>
+                        </span>
+                        <ArrowRight class="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                       </button>
                     )}
                   </For>
@@ -176,8 +183,17 @@ export function LandingPage(props: LandingPageProps) {
         </div>
       </section>
 
-      <footer class="relative z-10 mx-auto w-full max-w-6xl px-6 py-6 text-xs text-muted-foreground lg:px-8">
-        {text.landing.footer}
+      <footer class="relative z-10 mx-auto flex w-full max-w-6xl items-center gap-2 px-6 py-6 text-xs text-muted-foreground lg:px-8">
+        <span>{text.landing.footer}</span>
+        <span aria-hidden="true">–</span>
+        <a
+          class="font-medium text-foreground underline-offset-4 hover:underline"
+          href="https://tecera.ar"
+          target="_blank"
+          rel="noreferrer"
+        >
+          {text.landing.contact}
+        </a>
       </footer>
     </main>
   );

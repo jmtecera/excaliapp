@@ -1,4 +1,6 @@
 export type DeviceType = "desktop" | "tablet" | "mobile";
+export type PomodoroStatus = "idle" | "running" | "paused";
+export type PomodoroAction = "start" | "pause" | "reset" | "reset-total" | "set-duration";
 
 export type WorkspaceMember = {
   clientId: string;
@@ -13,6 +15,15 @@ export type Workspace = {
   roomCode: string;
   roomName: string;
   roomNameUpdatedAt: number;
+  accessToken: string;
+  pinEnabled: boolean;
+  pomodoroStatus: PomodoroStatus;
+  pomodoroDurationSeconds: number;
+  pomodoroEndsAt: number | null;
+  pomodoroStartedAt: number | null;
+  pomodoroRemainingSeconds: number;
+  pomodoroAccumulatedSeconds: number;
+  pomodoroUpdatedAt: number;
   memberName: string;
   memberEmail: string;
   device: DeviceType;
@@ -31,6 +42,7 @@ export type RoomRecord = {
   archived: boolean;
   createdAt: number;
   updatedAt: number;
+  lastOpenedAt: number;
 };
 
 export type RoomData = {
@@ -43,8 +55,25 @@ export type SyncPayload = {
   roomCode?: string;
   roomName?: string;
   roomNameUpdatedAt?: number;
+  accessToken?: string;
+  pinEnabled?: boolean;
+  pinRequired?: boolean;
+  pomodoroStatus?: PomodoroStatus;
+  pomodoroDurationSeconds?: number;
+  pomodoroEndsAt?: number | null;
+  pomodoroStartedAt?: number | null;
+  pomodoroRemainingSeconds?: number;
+  pomodoroAccumulatedSeconds?: number;
+  pomodoroUpdatedAt?: number;
   boards?: unknown[];
   members?: unknown[];
+};
+
+export type RecentRoom = {
+  code: string;
+  name: string;
+  accessToken: string;
+  lastVisitedAt: number;
 };
 
 export type CsvImportError = {

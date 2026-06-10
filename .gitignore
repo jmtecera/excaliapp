@@ -7,3 +7,5 @@ apps/web/dist/
 *.zip
 *.crx
 .DS_Store
+.env*
+!.env.example

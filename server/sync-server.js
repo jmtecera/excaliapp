@@ -2,12 +2,15 @@
 
 import { createServer } from "node:http";
 import {
+  authorizeRoom,
   createRoom,
   getErrorResponse,
   isSupabaseConfigured,
   readRequestBody,
   sendJson,
   syncRoom,
+  updateRoomPin,
+  updateRoomTimer,
 } from "./supabase.js";
 
 const PORT = Number.parseInt(process.env.PORT || "8787", 10);
@@ -38,9 +41,39 @@ const server = createServer(async (request, response) => {
     }
 
     const syncMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/sync$/i);
+    const authorizeMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/authorize$/i);
+    const pinMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/pin$/i);
+    const timerMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/timer$/i);
 
     if (request.method === "POST" && syncMatch?.[1]) {
       sendJson(response, 200, await syncRoom(syncMatch[1].toUpperCase(), await readRequestBody(request)));
+      return;
+    }
+
+    if (request.method === "POST" && authorizeMatch?.[1]) {
+      sendJson(
+        response,
+        200,
+        await authorizeRoom(authorizeMatch[1].toUpperCase(), await readRequestBody(request)),
+      );
+      return;
+    }
+
+    if (request.method === "POST" && pinMatch?.[1]) {
+      sendJson(
+        response,
+        200,
+        await updateRoomPin(pinMatch[1].toUpperCase(), await readRequestBody(request)),
+      );
+      return;
+    }
+
+    if (request.method === "POST" && timerMatch?.[1]) {
+      sendJson(
+        response,
+        200,
+        await updateRoomTimer(timerMatch[1].toUpperCase(), await readRequestBody(request)),
+      );
       return;
     }
 

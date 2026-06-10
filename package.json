@@ -10,10 +10,12 @@
     "dev:api": "node server/sync-server.js",
     "preview": "vite preview",
     "typecheck": "tsc --project tsconfig.json",
-    "check": "pnpm typecheck && pnpm build"
+    "check": "pnpm typecheck && pnpm build",
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
+    "@supabase/supabase-js": "^2.108.1",
     "blueimp-md5": "^2.19.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

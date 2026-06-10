@@ -13,7 +13,28 @@ export async function createRoom(payload) {
 }
 
 export async function syncRoom(roomCode, payload) {
-  return callRpc("sync_excalidraw_room", {
+  return callRpc("sync_excalidraw_room_with_timer", {
+    ...payload,
+    roomCode,
+  });
+}
+
+export async function updateRoomTimer(roomCode, payload) {
+  return callRpc("update_excalidraw_room_timer", {
+    ...payload,
+    roomCode,
+  });
+}
+
+export async function authorizeRoom(roomCode, payload) {
+  return callRpc("authorize_excalidraw_room", {
+    ...payload,
+    roomCode,
+  });
+}
+
+export async function updateRoomPin(roomCode, payload) {
+  return callRpc("update_excalidraw_room_pin", {
     ...payload,
     roomCode,
   });

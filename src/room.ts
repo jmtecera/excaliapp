@@ -58,11 +58,13 @@ export function createRoomRecord({
   archived = false,
   createdAt = Date.now(),
   updatedAt = createdAt,
+  lastOpenedAt = createdAt,
 }: RoomData & {
   name?: string;
   archived?: boolean;
   createdAt?: number;
   updatedAt?: number;
+  lastOpenedAt?: number;
 }): RoomRecord {
   assertRoomData({ roomId, roomKey });
 
@@ -75,6 +77,7 @@ export function createRoomRecord({
     archived,
     createdAt,
     updatedAt,
+    lastOpenedAt,
   };
 }
 
@@ -122,6 +125,7 @@ export function normalizeRoomRecord(room: unknown): RoomRecord | null {
 
   const createdAt = toTimestamp(candidate.createdAt, now);
   const updatedAt = toTimestamp(candidate.updatedAt, createdAt);
+  const lastOpenedAt = toTimestamp(candidate.lastOpenedAt, updatedAt);
 
   return {
     id: typeof candidate.id === "string" && candidate.id ? candidate.id : crypto.randomUUID(),
@@ -132,11 +136,16 @@ export function normalizeRoomRecord(room: unknown): RoomRecord | null {
     archived: typeof candidate.archived === "boolean" ? candidate.archived : candidate.status === "inactive",
     createdAt,
     updatedAt,
+    lastOpenedAt,
   };
 }
 
 export function sortRooms(rooms: RoomRecord[]): RoomRecord[] {
   return [...rooms].sort((left, right) => {
+    if (right.lastOpenedAt !== left.lastOpenedAt) {
+      return right.lastOpenedAt - left.lastOpenedAt;
+    }
+
     if (right.updatedAt !== left.updatedAt) {
       return right.updatedAt - left.updatedAt;
     }
@@ -151,7 +160,11 @@ export function mergeRoomRecordLists(localRooms: RoomRecord[], remoteRooms: unkn
   for (const room of [...localRooms, ...remoteRooms].map(normalizeRoomRecord).filter(Boolean) as RoomRecord[]) {
     const existingRoom = byId.get(room.id);
 
-    if (!existingRoom || room.updatedAt >= existingRoom.updatedAt) {
+    if (
+      !existingRoom ||
+      room.updatedAt > existingRoom.updatedAt ||
+      room.lastOpenedAt > existingRoom.lastOpenedAt
+    ) {
       byId.set(room.id, room);
     }
   }

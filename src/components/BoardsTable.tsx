@@ -4,7 +4,6 @@ import {
   ArrowUpRight,
   Check,
   Clipboard,
-  MoreHorizontal,
   Pencil,
   X,
 } from "lucide-solid";
@@ -41,7 +40,7 @@ export function BoardsTable(props: BoardsTableProps) {
           </div>
         }
       >
-        <div class="hidden grid-cols-[minmax(0,1fr)_140px_148px] border-b border-border bg-muted/40 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:grid">
+        <div class="hidden grid-cols-[minmax(0,1fr)_140px_210px] border-b border-border bg-muted/40 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:grid">
           <span>{text.boards.board}</span>
           <span>{text.boards.updated}</span>
           <span class="text-right">{text.boards.actions}</span>
@@ -87,7 +86,7 @@ function BoardRow(props: {
   }
 
   return (
-    <div class="grid gap-3 px-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_140px_148px] sm:items-center">
+    <div class="grid gap-3 px-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_140px_210px] sm:items-center">
       <div class="min-w-0">
         <Show
           when={editing()}
@@ -133,6 +132,16 @@ function BoardRow(props: {
       </div>
 
       <div class="flex items-center justify-start gap-1 sm:justify-end">
+        <Button
+          class="mr-1"
+          variant="secondary"
+          size="sm"
+          type="button"
+          onClick={() => props.onOpen(props.board)}
+        >
+          <ArrowUpRight class="size-3.5" />
+          {text.boards.openPrimary}
+        </Button>
         <Button variant="ghost" size="icon" type="button" title={text.boards.copy} onClick={() => props.onCopy(props.board)}>
           <Clipboard class="size-4" />
         </Button>
@@ -149,9 +158,6 @@ function BoardRow(props: {
           <Show when={props.archived} fallback={<Archive class="size-4" />}>
             <ArchiveRestore class="size-4" />
           </Show>
-        </Button>
-        <Button variant="ghost" size="icon" type="button" title={text.boards.open} onClick={() => props.onOpen(props.board)}>
-          <MoreHorizontal class="size-4" />
         </Button>
       </div>
     </div>
