@@ -31,14 +31,14 @@ export function Dialog(props: {
     <Show when={props.open}>
       <Portal>
         <div
-          class="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+          class="modal-backdrop fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) props.onOpenChange(false);
           }}
         >
           <section
-            class="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-2xl shadow-black/50"
+            class="modal-panel relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-2xl shadow-black/50"
             role="dialog"
             aria-modal="true"
             aria-labelledby="room-settings-title"

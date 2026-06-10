@@ -12,6 +12,8 @@ import { PinPrompt } from "./components/PinPrompt";
 import { RoomPage } from "./components/RoomPage";
 import { writeClipboard } from "./format";
 import { locale, text } from "./i18n";
+import { playPomodoroCompleteSound, prepareNotificationSound } from "./notifications";
+import { getPomodoroRemainingSeconds } from "./pomodoro";
 import { subscribeToRoom } from "./realtime";
 import { createRoomRecord, createRoomRecordFromUrl, generateCollaborationLinkData, sortRooms } from "./room";
 import {
@@ -82,6 +84,11 @@ export function App() {
   let toastTimeout = 0;
   let realtimeSyncTimeout = 0;
   let syncQueued = false;
+  let previousTimer = {
+    roomId: initialWorkspace.roomId,
+    status: initialWorkspace.pomodoroStatus,
+    remaining: getPomodoroRemainingSeconds(initialWorkspace, Date.now()),
+  };
 
   const inRoom = createMemo(
     () =>
@@ -100,7 +107,6 @@ export function App() {
           current.roomId,
           current.clientId,
           current.memberName,
-          current.memberEmail,
           current.device,
         ].join("|")
       : "";
@@ -121,6 +127,29 @@ export function App() {
       onPresence: setRealtimeMembers,
     });
     onCleanup(unsubscribe);
+  });
+
+  createEffect(() => {
+    const currentWorkspace = workspace();
+    const remaining = getPomodoroRemainingSeconds(currentWorkspace, now());
+    const sameRoom = previousTimer.roomId === currentWorkspace.roomId;
+
+    if (
+      sameRoom &&
+      previousTimer.status === "running" &&
+      previousTimer.remaining > 0 &&
+      currentWorkspace.pomodoroStatus === "running" &&
+      remaining === 0
+    ) {
+      playPomodoroCompleteSound();
+      showToast(text.toast.pomodoroComplete);
+    }
+
+    previousTimer = {
+      roomId: currentWorkspace.roomId,
+      status: currentWorkspace.pomodoroStatus,
+      remaining,
+    };
   });
 
   onMount(() => {
@@ -154,11 +183,18 @@ export function App() {
       setRecentRooms(loadRecentRooms());
     };
     const handlePopState = () => setRouteCode(getRouteRoomCode());
+    const handleFirstInteraction = () => {
+      prepareNotificationSound();
+      window.removeEventListener("pointerdown", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
+    };
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("online", handleOnline);
     window.addEventListener("storage", handleStorage);
     window.addEventListener("popstate", handlePopState);
+    window.addEventListener("pointerdown", handleFirstInteraction, { once: true });
+    window.addEventListener("keydown", handleFirstInteraction, { once: true });
 
     onCleanup(() => {
       window.clearInterval(clockInterval);
@@ -168,6 +204,8 @@ export function App() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("pointerdown", handleFirstInteraction);
+      window.removeEventListener("keydown", handleFirstInteraction);
     });
   });
 
@@ -676,7 +714,7 @@ function getVisibleMembers(
 }
 
 function getRouteRoomCode(): string {
-  const match = window.location.pathname.match(/^\/room\/([A-Za-z]{3}-[A-Za-z]{3})\/?$/);
+  const match = window.location.pathname.match(/^\/room\/([A-Za-z0-9]{3}-[A-Za-z0-9]{3})\/?$/);
   return match?.[1]?.toUpperCase() || "";
 }
 

@@ -1,41 +1,95 @@
 # Excaliapp Rooms
 
-A minimal shared room manager for Excalidraw boards. The frontend is Solid, Vite, Tailwind, and shadcn-style UI primitives. Room state is stored in Supabase Postgres and synchronized through server-only Vercel functions.
+Excaliapp Rooms is a dark-mode web app for organizing shared Excalidraw boards. A room has a short code, a shared board list, participant presence, an optional PIN, and a synchronized Pomodoro timer.
 
-## Local development
+## Stack
 
-1. Copy `.env.example` to `.env`.
-2. Set `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `POSTGRES_URL_NON_POOLING` in `.env`.
-3. Run `pnpm db:push` to apply the database migrations.
-4. Run `pnpm dev:api` and `pnpm dev` in separate terminals.
+- SolidJS and TypeScript
+- Vite and Tailwind CSS
+- Vercel Functions for the HTTP API
+- Supabase Postgres RPCs for room state
+- Supabase Realtime for change notifications and presence
 
-Vite proxies `/api` to the local API server on port `8787`.
+## Requirements
 
-## Vercel
+- Node.js 20 or newer
+- pnpm 10 or newer
+- A Supabase project
 
-Set these server-side environment variables in Vercel:
+## Local Setup
+
+1. Install dependencies:
+
+   ```sh
+   pnpm install
+   ```
+
+2. Create a local environment file:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+3. Configure the Supabase URL, server secret, migration database URL, and public Realtime key in `.env`.
+
+4. Apply the database migrations:
+
+   ```sh
+   pnpm db:push
+   ```
+
+5. Start the API and frontend in separate terminals:
+
+   ```sh
+   pnpm dev:api
+   pnpm dev
+   ```
+
+Vite proxies `/api` to the local API on port `8787`.
+
+## Commands
+
+```sh
+pnpm dev          # Start the Vite development server
+pnpm dev:api      # Start the local API server
+pnpm test         # Run server validation and security tests
+pnpm typecheck    # Check TypeScript
+pnpm build        # Create a production frontend build
+pnpm check        # Run tests, typecheck, and build
+pnpm db:push      # Apply pending Supabase migrations
+pnpm preview      # Preview the production frontend build
+```
+
+## Environment
+
+Server-only values:
 
 - `SUPABASE_URL`
-- `SUPABASE_SECRET_KEY` (recommended) or `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SECRET_KEY`, or the legacy `SUPABASE_SERVICE_ROLE_KEY`
+- `POSTGRES_URL_NON_POOLING` for migration commands
 
-The database schema is deployed separately from Vercel. Before using the production app, pull the Vercel development environment or set `POSTGRES_URL_NON_POOLING` locally and run:
+Browser-safe values:
+
+- `VITE_PUBLIC_SUPABASE_URL`
+- `VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_API_BASE_URL`, normally left empty for same-origin API requests
+
+Never prefix database URLs or server secrets with `VITE_`.
+
+## Access Model
+
+Room codes are capability links. Anyone with the code can join an unprotected room and collaborate. When a PIN is enabled, room data and mutations require a valid room access token issued after PIN verification.
+
+PIN checks, timer changes, board synchronization, and room updates are enforced in server-side Supabase functions. PIN failures are throttled per room and request source. Access tokens are stored as SHA-256 hashes in Postgres and expire after 90 days.
+
+Excalidraw collaboration links contain the board encryption key. They are shared only with members who can access the room. Participant email addresses are kept in the browser for the local Gravatar preview and are not sent through room sync or Realtime presence.
+
+## Deployment
+
+The frontend and API are configured for Vercel. Set the server and public environment variables in the Vercel project, then apply migrations before serving a new release.
+
+Production builds can apply pending migrations when a supported Postgres URL is available:
 
 ```sh
-pnpm db:push
+pnpm vercel-build
 ```
-
-For a linked Vercel project, the production variables can be used without writing them to disk:
-
-```sh
-pnpm dlx vercel@latest env run -e production -- pnpm db:push
-```
-
-`POSTGRES_URL_NON_POOLING` is needed only while applying migrations; the running Vercel API uses `SUPABASE_URL` and its server secret.
-
-Do not prefix database URLs, secret keys, or service-role keys with `VITE_`; those values must never be included in the browser bundle. Realtime uses only `VITE_PUBLIC_SUPABASE_URL` and the Supabase publishable key. `VITE_API_BASE_URL` is optional and should normally remain empty so it uses the same-origin Vercel functions.
-
-Production Vercel builds run pending migrations automatically when one of the supported Postgres URLs is configured.
-
-## Missing RPC or schema cache
-
-If Supabase reports that it cannot find `public.create_excalidraw_room(payload)`, the migration has not been applied to that project. Run `pnpm db:push`. The final migration also asks PostgREST to reload its schema cache.

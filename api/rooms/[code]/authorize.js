@@ -13,7 +13,7 @@ export default async function handler(request, response) {
 
   try {
     const code = String(request.query?.code || "").toUpperCase();
-    sendJson(response, 200, await authorizeRoom(code, await readRequestBody(request)));
+    sendJson(response, 200, await authorizeRoom(code, await readRequestBody(request), request));
   } catch (error) {
     const result = getErrorResponse(error);
     sendJson(response, result.status, result.body);

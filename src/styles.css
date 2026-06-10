@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
-
 @theme inline {
   --font-sans: "Geist Variable", "Helvetica Neue", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -20,37 +18,19 @@
 }
 
 :root {
-  color-scheme: light;
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --border: #e5e5e5;
-  --input: #d4d4d4;
-  --ring: rgb(10 10 10 / 0.14);
-  --primary: #0a0a0a;
-  --primary-foreground: #ffffff;
-  --destructive: #dc2626;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: #000000;
-    --foreground: #ededed;
-    --card: #050505;
-    --card-foreground: #ededed;
-    --muted: #111111;
-    --muted-foreground: #8f8f8f;
-    --border: #242424;
-    --input: #333333;
-    --ring: rgb(255 255 255 / 0.2);
-    --primary: #ededed;
-    --primary-foreground: #050505;
-    --destructive: #f87171;
-  }
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #ededed;
+  --card: #050505;
+  --card-foreground: #ededed;
+  --muted: #111111;
+  --muted-foreground: #8f8f8f;
+  --border: #242424;
+  --input: #333333;
+  --ring: rgb(255 255 255 / 0.2);
+  --primary: #ededed;
+  --primary-foreground: #050505;
+  --destructive: #f87171;
 }
 
 * {
@@ -88,6 +68,12 @@ summary {
   -webkit-tap-highlight-color: transparent;
 }
 
+button:not(:disabled),
+summary,
+a[href] {
+  cursor: pointer;
+}
+
 button:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--foreground);
@@ -107,21 +93,78 @@ summary:focus-visible {
   mask-image: linear-gradient(to bottom, black 0%, transparent 82%);
 }
 
-.code-letter {
-  animation: code-letter-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.modal-backdrop {
+  animation: modal-backdrop-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes code-letter-in {
+.modal-panel {
+  transform-origin: center 42%;
+  animation: modal-panel-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes modal-backdrop-in {
   from {
     opacity: 0;
-    transform: translateY(5px) scale(0.88);
-    filter: blur(3px);
+    backdrop-filter: blur(0);
+  }
+
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.965);
+    filter: blur(8px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
+  }
+}
+
+@media (max-height: 760px) {
+  .landing-header {
+    padding-block: 0.75rem;
+  }
+
+  .landing-content {
+    gap: 1rem;
+    padding-block: 0.25rem;
+  }
+
+  .landing-title {
+    font-size: clamp(2rem, 7vh, 3.5rem);
+  }
+
+  .landing-description {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.4rem;
+  }
+
+  .landing-recent {
+    display: none;
+  }
+
+  .landing-footer {
+    padding-block: 0.6rem;
+  }
+}
+
+@media (max-height: 620px) {
+  .landing-description,
+  .landing-footer {
+    display: none;
+  }
+
+  .landing-card > div {
+    padding: 1rem;
   }
 }
 

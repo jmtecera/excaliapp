@@ -13,7 +13,7 @@ export async function createSharedRoom({
 }: Pick<Workspace, "roomName" | "memberName" | "memberEmail" | "clientId" | "device">): Promise<Workspace> {
   const payload = await request<SyncPayload>("/api/rooms", {
     method: "POST",
-    body: JSON.stringify({ roomName, memberName, memberEmail, clientId, device }),
+    body: JSON.stringify({ roomName, memberName, clientId, device }),
   });
 
   return normalizeWorkspace({
@@ -45,7 +45,6 @@ export async function syncWorkspace({
       accessToken: workspace.accessToken,
       clientId: workspace.clientId,
       memberName: workspace.memberName,
-      memberEmail: workspace.memberEmail,
       device: workspace.device,
       boards: rooms,
     }),

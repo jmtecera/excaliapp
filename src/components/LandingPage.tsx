@@ -1,11 +1,18 @@
 import { ArrowRight, Clock3, Plus } from "lucide-solid";
-import { For, Index, Show, createSignal } from "solid-js";
+import { For, Show, createSignal } from "solid-js";
 import { text } from "../i18n";
 import type { RecentRoom, Workspace } from "../types";
 import { normalizeRoomCode } from "../workspace";
 import { BrandMark } from "./BrandMark";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+  REGEXP_ONLY_DIGITS_AND_CHARS,
+} from "./ui/input-otp";
 
 type LandingPageProps = {
   workspace: Workspace;
@@ -48,9 +55,9 @@ export function LandingPage(props: LandingPageProps) {
   }
 
   return (
-    <main class="relative flex min-h-dvh flex-col overflow-hidden bg-background">
+    <main class="landing-page relative flex h-dvh flex-col overflow-hidden bg-background">
       <div class="absolute inset-0 landing-grid opacity-45" aria-hidden="true" />
-      <header class="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">
+      <header class="landing-header relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between px-5 py-4 sm:px-6 lg:px-8 lg:py-6">
         <div class="flex items-center gap-3">
           <BrandMark />
           <span class="text-sm font-semibold tracking-tight">{text.appName}</span>
@@ -58,20 +65,20 @@ export function LandingPage(props: LandingPageProps) {
         <span class="hidden text-xs text-muted-foreground sm:block">{text.landing.tagline}</span>
       </header>
 
-      <section class="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-16 px-6 py-12 lg:grid-cols-[1fr_460px] lg:px-8 lg:py-20">
+      <section class="landing-content relative z-10 mx-auto grid min-h-0 w-full max-w-6xl flex-1 items-center gap-7 px-5 py-3 sm:px-6 sm:py-5 lg:grid-cols-[1fr_460px] lg:gap-16 lg:px-8 lg:py-8">
         <div class="max-w-2xl">
-          <h1 class="max-w-xl text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
+          <h1 class="landing-title max-w-xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-7xl">
             {text.landing.heroLead}
             <span class="block text-muted-foreground">{text.landing.heroAccent}</span>
           </h1>
-          <p class="mt-7 max-w-lg text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
+          <p class="landing-description mt-4 max-w-lg text-pretty text-sm leading-6 text-muted-foreground sm:mt-5 sm:text-base sm:leading-7 lg:mt-7 lg:text-lg">
             {text.landing.description}
           </p>
         </div>
 
-        <div class="rounded-xl border border-border bg-card p-2 shadow-2xl shadow-black/[0.06] dark:shadow-black/60">
-          <div class="rounded-lg border border-border bg-background p-5 sm:p-7">
-            <div class="mb-6">
+        <div class="landing-card rounded-xl border border-border bg-card p-2 shadow-2xl shadow-black/60">
+          <div class="rounded-lg border border-border bg-background p-4 sm:p-6 lg:p-7">
+            <div class="mb-4 sm:mb-6">
               <h2 class="text-lg font-semibold tracking-tight">{text.landing.enterTitle}</h2>
               <p class="mt-1 text-sm text-muted-foreground">{text.landing.enterDescription}</p>
             </div>
@@ -97,51 +104,42 @@ export function LandingPage(props: LandingPageProps) {
                 {generating() ? text.landing.generating : text.landing.generate}
               </Button>
 
-              <div class="my-3 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <div class="my-2 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:my-3">
                 <span class="h-px flex-1 bg-border" />
-                - {text.landing.or} -
+                {text.landing.or}
                 <span class="h-px flex-1 bg-border" />
               </div>
 
-              <div class="flex gap-2">
-                <Show
-                  when={generating()}
-                  fallback={
-                    <Input
-                      class="h-12 font-mono text-base font-semibold uppercase tracking-[0.22em]"
-                      value={roomCode()}
-                      onInput={(event) => setRoomCode(normalizeRoomCode(event.currentTarget.value))}
-                      placeholder="ABC-DEF"
-                      maxlength={7}
-                      spellcheck={false}
-                      autocomplete="off"
-                      aria-label={text.landing.roomCode}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          void props.onJoin({ code: roomCode(), name: name() });
-                        }
-                      }}
-                    />
-                  }
+              <div class="flex items-center gap-2">
+                <InputOTP
+                  class="min-w-0 flex-1 justify-center"
+                  value={roomCode().replace("-", "")}
+                  onValueChange={(value) => setRoomCode(normalizeRoomCode(value))}
+                  maxLength={6}
+                  pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                  disabled={unavailable()}
+                  aria-label={text.landing.roomCode}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !unavailable()) {
+                      event.preventDefault();
+                      void props.onJoin({ code: roomCode(), name: name() });
+                    }
+                  }}
                 >
-                  <div
-                    class="flex h-12 w-full items-center rounded-md border border-input bg-background px-3 font-mono text-base font-semibold uppercase tracking-[0.22em] shadow-sm"
-                    aria-label={text.landing.generating}
-                    aria-live="polite"
-                  >
-                    <Show
-                      when={roomCode()}
-                      fallback={<span class="animate-pulse text-muted-foreground">···-···</span>}
-                    >
-                      <Index each={roomCode().split("")}>
-                        {(letter) => <span class="code-letter">{letter()}</span>}
-                      </Index>
-                    </Show>
-                  </div>
-                </Show>
+                  <InputOTPGroup class="gap-1 sm:gap-2">
+                    <InputOTPSlot class="size-10 uppercase sm:size-11" index={0} />
+                    <InputOTPSlot class="size-10 uppercase sm:size-11" index={1} />
+                    <InputOTPSlot class="size-10 uppercase sm:size-11" index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup class="gap-1 sm:gap-2">
+                    <InputOTPSlot class="size-10 uppercase sm:size-11" index={3} />
+                    <InputOTPSlot class="size-10 uppercase sm:size-11" index={4} />
+                    <InputOTPSlot class="size-10 uppercase sm:size-11" index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
                 <Button
-                  class="h-12 px-4"
+                  class="h-11 self-center px-4 sm:h-12"
                   type="button"
                   disabled={unavailable()}
                   aria-label={text.landing.enterRoom}
@@ -153,7 +151,7 @@ export function LandingPage(props: LandingPageProps) {
             </div>
 
             <Show when={props.recentRooms.length > 0}>
-              <div class="mt-7 border-t border-border pt-5">
+              <div class="landing-recent mt-5 border-t border-border pt-4 sm:mt-7 sm:pt-5">
                 <div class="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Clock3 class="size-3.5" />
                   {text.landing.recent}
@@ -183,7 +181,7 @@ export function LandingPage(props: LandingPageProps) {
         </div>
       </section>
 
-      <footer class="relative z-10 mx-auto flex w-full max-w-6xl items-center gap-2 px-6 py-6 text-xs text-muted-foreground lg:px-8">
+      <footer class="landing-footer relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center gap-2 px-5 py-3 text-xs text-muted-foreground sm:px-6 lg:px-8 lg:py-5">
         <span>{text.landing.footer}</span>
         <span aria-hidden="true">–</span>
         <a

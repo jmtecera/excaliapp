@@ -16,14 +16,6 @@ import {
 const PORT = Number.parseInt(process.env.PORT || "8787", 10);
 
 const server = createServer(async (request, response) => {
-  setCorsHeaders(response);
-
-  if (request.method === "OPTIONS") {
-    response.writeHead(204);
-    response.end();
-    return;
-  }
-
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
@@ -40,10 +32,10 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const syncMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/sync$/i);
-    const authorizeMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/authorize$/i);
-    const pinMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/pin$/i);
-    const timerMatch = url.pathname.match(/^\/api\/rooms\/([A-Z]{3}-[A-Z]{3})\/timer$/i);
+    const syncMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/sync$/i);
+    const authorizeMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/authorize$/i);
+    const pinMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/pin$/i);
+    const timerMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/timer$/i);
 
     if (request.method === "POST" && syncMatch?.[1]) {
       sendJson(response, 200, await syncRoom(syncMatch[1].toUpperCase(), await readRequestBody(request)));
@@ -54,7 +46,11 @@ const server = createServer(async (request, response) => {
       sendJson(
         response,
         200,
-        await authorizeRoom(authorizeMatch[1].toUpperCase(), await readRequestBody(request)),
+        await authorizeRoom(
+          authorizeMatch[1].toUpperCase(),
+          await readRequestBody(request),
+          request,
+        ),
       );
       return;
     }
@@ -88,9 +84,3 @@ server.listen(PORT, () => {
   console.log(`Excaliapp Rooms API listening on http://localhost:${PORT}`);
   console.log(`Storage: ${isSupabaseConfigured() ? "Supabase Postgres" : "missing Supabase environment"}`);
 });
-
-function setCorsHeaders(response) {
-  response.setHeader("access-control-allow-origin", "*");
-  response.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
-  response.setHeader("access-control-allow-headers", "content-type");
-}

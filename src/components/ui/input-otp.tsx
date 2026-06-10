@@ -8,12 +8,14 @@ import {
 import { cn } from "../../lib/utils";
 
 export const REGEXP_ONLY_DIGITS = "^[0-9]+$";
+export const REGEXP_ONLY_DIGITS_AND_CHARS = "^[a-zA-Z0-9]+$";
 
 type InputOTPContextValue = {
   value: () => string;
   maxLength: number;
   disabled: () => boolean;
   label: string;
+  inputMode: "numeric" | "text";
   register: (index: number, input: HTMLInputElement) => void;
   update: (index: number, value: string) => void;
   handleKeyDown: (index: number, event: KeyboardEvent) => void;
@@ -31,7 +33,8 @@ type InputOTPProps = ParentProps<{
   autofocus?: boolean;
   "aria-label"?: string;
   class?: string;
-}>;
+}> &
+  Omit<JSX.HTMLAttributes<HTMLDivElement>, "onInput">;
 
 export function InputOTP(props: InputOTPProps) {
   const [local, containerProps] = splitProps(props, [
@@ -52,9 +55,9 @@ export function InputOTP(props: InputOTPProps) {
   }
 
   function update(index: number, rawValue: string) {
-    const digits = rawValue.replace(/\D/g, "");
+    const characters = filterCharacters(rawValue, local.pattern);
 
-    if (!digits) {
+    if (!characters) {
       const next = local.value.padEnd(local.maxLength, " ").split("");
       next[index] = " ";
       local.onValueChange(next.join("").replace(/\s/g, "").slice(0, local.maxLength));
@@ -62,12 +65,12 @@ export function InputOTP(props: InputOTPProps) {
     }
 
     const next = local.value.padEnd(local.maxLength, " ").split("");
-    digits.slice(0, local.maxLength - index).split("").forEach((digit, offset) => {
-      next[index + offset] = digit;
+    characters.slice(0, local.maxLength - index).split("").forEach((character, offset) => {
+      next[index + offset] = character;
     });
     const value = next.join("").replace(/\s/g, "").slice(0, local.maxLength);
     local.onValueChange(value);
-    focus(Math.min(index + digits.length, local.maxLength - 1));
+    focus(Math.min(index + characters.length, local.maxLength - 1));
   }
 
   function handleKeyDown(index: number, event: KeyboardEvent) {
@@ -85,14 +88,17 @@ export function InputOTP(props: InputOTPProps) {
   }
 
   function handlePaste(index: number, event: ClipboardEvent) {
-    const digits = event.clipboardData?.getData("text").replace(/\D/g, "") || "";
+    const characters = filterCharacters(
+      event.clipboardData?.getData("text") || "",
+      local.pattern,
+    );
 
-    if (!digits) {
+    if (!characters) {
       return;
     }
 
     event.preventDefault();
-    update(index, digits);
+    update(index, characters);
   }
 
   const context: InputOTPContextValue = {
@@ -100,6 +106,7 @@ export function InputOTP(props: InputOTPProps) {
     maxLength: local.maxLength,
     disabled: () => Boolean(local.disabled),
     label: local["aria-label"] || "One-time password",
+    inputMode: local.pattern === REGEXP_ONLY_DIGITS ? "numeric" : "text",
     register: (index, input) => {
       inputs[index] = input;
       if (index === 0 && local.autofocus) {
@@ -135,6 +142,19 @@ export function InputOTPGroup(props: JSX.HTMLAttributes<HTMLDivElement>) {
   );
 }
 
+export function InputOTPSeparator(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const [local, separatorProps] = splitProps(props, ["class"]);
+  return (
+    <div
+      class={cn("px-0.5 text-sm font-medium text-muted-foreground", local.class)}
+      aria-hidden="true"
+      {...separatorProps}
+    >
+      -
+    </div>
+  );
+}
+
 export function InputOTPSlot(props: { index: number; class?: string }) {
   const context = useContext(InputOTPContext);
 
@@ -151,7 +171,7 @@ export function InputOTPSlot(props: { index: number; class?: string }) {
       )}
       value={context.value()[props.index] || ""}
       type="text"
-      inputmode="numeric"
+      inputmode={context.inputMode}
       autocomplete={props.index === 0 ? "one-time-code" : "off"}
       maxlength={1}
       disabled={context.disabled()}
@@ -162,4 +182,9 @@ export function InputOTPSlot(props: { index: number; class?: string }) {
       onPaste={(event) => context.handlePaste(props.index, event)}
     />
   );
+}
+
+function filterCharacters(value: string, pattern = REGEXP_ONLY_DIGITS): string {
+  const matcher = new RegExp(pattern);
+  return [...value].filter((character) => matcher.test(character)).join("");
 }

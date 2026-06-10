@@ -49,7 +49,6 @@ export function subscribeToRoom({
       await channel.track({
         clientId: workspace.clientId,
         name: workspace.memberName,
-        email: workspace.memberEmail,
         device: workspace.device,
         lastSeenAt: Date.now(),
       });

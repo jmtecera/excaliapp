@@ -30,8 +30,8 @@ export function PinPrompt(props: {
   }
 
   return (
-    <div class="fixed inset-0 z-50 grid place-items-center bg-black/65 p-4 backdrop-blur-sm">
-      <div class="w-full max-w-sm rounded-xl border border-border bg-background p-2 shadow-2xl">
+    <div class="modal-backdrop fixed inset-0 z-50 grid place-items-center bg-black/65 p-4 backdrop-blur-sm">
+      <div class="modal-panel w-full max-w-sm rounded-xl border border-border bg-background p-2 shadow-2xl">
         <form class="rounded-lg border border-border bg-card p-6" onSubmit={(event) => void submit(event)}>
           <div class="flex items-start justify-between gap-4">
             <div class="grid size-10 place-items-center rounded-lg border border-border bg-background">

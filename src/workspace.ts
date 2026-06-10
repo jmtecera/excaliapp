@@ -2,7 +2,7 @@ import { randomBase64Url } from "./encoding";
 import { text } from "./i18n";
 import type { DeviceType, PomodoroStatus, Workspace, WorkspaceMember } from "./types";
 
-const ROOM_CODE_PATTERN = /^[A-Z]{3}-[A-Z]{3}$/;
+const ROOM_CODE_PATTERN = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
 const DEFAULT_POMODORO_SECONDS = 25 * 60;
 const MAX_POMODORO_SECONDS = 120 * 60;
 
@@ -83,7 +83,7 @@ export function normalizeMember(member: unknown): WorkspaceMember | null {
   return {
     clientId: candidate.clientId,
     name: normalizeMemberName(candidate.name),
-    email: normalizeEmail(candidate.email),
+    email: "",
     device: normalizeDevice(candidate.device),
     lastSeenAt:
       typeof candidate.lastSeenAt === "number" && candidate.lastSeenAt > 0 ? candidate.lastSeenAt : null,
@@ -93,9 +93,9 @@ export function normalizeMember(member: unknown): WorkspaceMember | null {
 export function normalizeRoomCode(code: unknown): string {
   return String(code || "")
     .toUpperCase()
-    .replace(/[^A-Z]/g, "")
+    .replace(/[^A-Z0-9]/g, "")
     .slice(0, 6)
-    .replace(/^([A-Z]{3})([A-Z])/, "$1-$2");
+    .replace(/^([A-Z0-9]{3})([A-Z0-9])/, "$1-$2");
 }
 
 export function requireRoomCode(code: unknown): string {

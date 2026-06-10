@@ -9,8 +9,9 @@
     "dev": "vite",
     "dev:api": "node server/sync-server.js",
     "preview": "vite preview",
+    "test": "node --test server/supabase.test.js",
     "typecheck": "tsc --project tsconfig.json",
-    "check": "pnpm typecheck && pnpm build",
+    "check": "pnpm test && pnpm typecheck && pnpm build",
     "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {

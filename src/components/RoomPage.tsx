@@ -265,7 +265,7 @@ export function RoomPage(props: RoomPageProps) {
             </div>
 
             <form
-              class="flex flex-col gap-2 rounded-xl border border-border bg-card p-2 shadow-xl shadow-black/[0.04] sm:flex-row dark:shadow-black/40"
+              class="flex flex-col gap-2 rounded-xl border border-border bg-card p-2 shadow-xl shadow-black/40 sm:flex-row sm:items-center"
               onSubmit={(event) => void createBoard(event)}
             >
               <Input
@@ -492,7 +492,7 @@ export function RoomPage(props: RoomPageProps) {
                   <InputOTPSlot index={3} />
                 </InputOTPGroup>
               </InputOTP>
-              <div class="mt-3 flex gap-2">
+              <div class="mt-3 flex items-center gap-2">
                 <Button
                   variant="secondary"
                   type="button"
@@ -586,7 +586,7 @@ export function RoomPage(props: RoomPageProps) {
 
           <Show when={view() === "active" && latestBoard()}>
             {(board) => (
-              <div class="relative mb-4 overflow-hidden rounded-xl border border-foreground/20 border-l-2 border-l-foreground/60 bg-card shadow-lg shadow-black/[0.03] dark:border-white/20 dark:border-l-white/60 dark:bg-muted/35 dark:shadow-black/30">
+              <div class="relative mb-4 overflow-hidden rounded-xl border border-white/20 border-l-2 border-l-white/60 bg-muted/35 shadow-lg shadow-black/30">
                 <div class="grid gap-6 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-6">
                   <div class="min-w-0">
                     <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -596,7 +596,7 @@ export function RoomPage(props: RoomPageProps) {
                     <p class="mt-1 truncate font-mono text-[11px] text-muted-foreground">{board().excalidrawUrl}</p>
                     <p class="mt-3 text-xs text-muted-foreground">{text.room.latestBoardHint}</p>
                   </div>
-                  <div class="flex gap-2">
+                  <div class="flex items-center gap-2">
                     <Button
                       size="lg"
                       type="button"
@@ -608,6 +608,7 @@ export function RoomPage(props: RoomPageProps) {
                     <Button
                       variant="ghost"
                       size="icon"
+                      class="size-12"
                       type="button"
                       title={text.boards.copy}
                       onClick={() => props.onCopyBoard(board())}
