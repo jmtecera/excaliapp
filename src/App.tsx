@@ -7,6 +7,7 @@ import {
   onMount,
   untrack,
 } from "solid-js";
+import { createAvatarHash } from "./avatar";
 import { LandingPage } from "./components/LandingPage";
 import { PinPrompt } from "./components/PinPrompt";
 import { RoomPage } from "./components/RoomPage";
@@ -107,6 +108,7 @@ export function App() {
           current.roomId,
           current.clientId,
           current.memberName,
+          createAvatarHash(current.memberEmail),
           current.device,
         ].join("|")
       : "";
@@ -606,7 +608,7 @@ export function App() {
   }
 
   function showToast(message: string) {
-    setToast(message);
+    setToast(message.trim().replace(/\.+$/, ""));
     window.clearTimeout(toastTimeout);
     toastTimeout = window.setTimeout(() => setToast(""), 2600);
   }
@@ -695,7 +697,7 @@ function getVisibleMembers(
   const self: WorkspaceMember = {
     clientId: workspace.clientId,
     name: workspace.memberName,
-    email: workspace.memberEmail,
+    avatarHash: createAvatarHash(workspace.memberEmail),
     device: workspace.device,
     lastSeenAt: now,
   };

@@ -82,7 +82,7 @@ Room codes are capability links. Anyone with the code can join an unprotected ro
 
 PIN checks, timer changes, board synchronization, and room updates are enforced in server-side Supabase functions. PIN failures are throttled per room and request source. Access tokens are stored as SHA-256 hashes in Postgres and expire after 90 days.
 
-Excalidraw collaboration links contain the board encryption key. They are shared only with members who can access the room. Participant email addresses are kept in the browser for the local Gravatar preview and are not sent through room sync or Realtime presence.
+Excalidraw collaboration links contain the board encryption key. They are shared only with members who can access the room. Participant email addresses stay in the browser. Realtime presence shares only the normalized MD5 identifier required to load the participant's Gravatar.
 
 ## Deployment
 

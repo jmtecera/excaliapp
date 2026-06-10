@@ -1,4 +1,5 @@
 import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
+import { createAvatarHash } from "./avatar";
 import { normalizeMember } from "./workspace";
 import type { Workspace, WorkspaceMember } from "./types";
 
@@ -49,6 +50,7 @@ export function subscribeToRoom({
       await channel.track({
         clientId: workspace.clientId,
         name: workspace.memberName,
+        avatarHash: createAvatarHash(workspace.memberEmail),
         device: workspace.device,
         lastSeenAt: Date.now(),
       });

@@ -1,4 +1,5 @@
 import { randomBase64Url } from "./encoding";
+import { normalizeAvatarHash } from "./avatar";
 import { text } from "./i18n";
 import type { DeviceType, PomodoroStatus, Workspace, WorkspaceMember } from "./types";
 
@@ -83,7 +84,7 @@ export function normalizeMember(member: unknown): WorkspaceMember | null {
   return {
     clientId: candidate.clientId,
     name: normalizeMemberName(candidate.name),
-    email: "",
+    avatarHash: normalizeAvatarHash(candidate.avatarHash),
     device: normalizeDevice(candidate.device),
     lastSeenAt:
       typeof candidate.lastSeenAt === "number" && candidate.lastSeenAt > 0 ? candidate.lastSeenAt : null,

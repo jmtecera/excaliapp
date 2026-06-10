@@ -43,7 +43,7 @@ pnpm check
 - Reuse the local `Button`, `Input`, `Dialog`, and `InputOTP` primitives.
 - Keep the interface dark-only and preserve the existing neutral visual system.
 - Use Tailwind utility classes for component styling and `src/styles.css` for global tokens or keyframes.
-- Keep user-facing text in `src/i18n.ts` for both English and Spanish.
+- Keep user-facing text in `src/i18n.ts`. The interface is English-only.
 - Keep edits narrowly scoped and avoid unrelated formatting changes.
 
 ## Data Flow
@@ -60,7 +60,7 @@ The room code is the access capability for an unprotected room. A protected room
 - Do not add server secrets to variables prefixed with `VITE_`.
 - Validate new API fields in `server/supabase.js` before they reach an RPC.
 - Keep API error messages generic. Do not return raw Postgres or Supabase errors.
-- Do not include participant email, access tokens, PINs, hashes, or server configuration in logs or shared presence data.
+- Do not include participant email, access tokens, PINs, secret hashes, or server configuration in logs or shared presence data. Presence may include only the MD5 identifier required by Gravatar.
 - Treat Excalidraw collaboration URLs as protected room data because their fragments contain encryption keys.
 - Enforce authorization in database functions for every protected read or mutation.
 - Add a new migration for schema or RPC changes; do not rewrite migrations that may already be deployed.

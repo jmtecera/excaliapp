@@ -5,7 +5,7 @@ export type PomodoroAction = "start" | "pause" | "reset" | "reset-total" | "set-
 export type WorkspaceMember = {
   clientId: string;
   name: string;
-  email: string;
+  avatarHash: string;
   device: DeviceType;
   lastSeenAt: number | null;
 };

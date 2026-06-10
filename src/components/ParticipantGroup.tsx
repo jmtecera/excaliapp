@@ -1,4 +1,3 @@
-import md5 from "blueimp-md5";
 import { For, Show } from "solid-js";
 import { text } from "../i18n";
 import type { WorkspaceMember } from "../types";
@@ -21,11 +20,11 @@ export function ParticipantGroup(props: { members: WorkspaceMember[]; selfId: st
             title={`${member.name}${member.clientId === props.selfId ? ` (${text.participant.you})` : ""}`}
           >
             <Show
-              when={member.email}
+              when={member.avatarHash}
               fallback={<span>{initials(member.name)}</span>}
             >
               <img
-                src={`https://www.gravatar.com/avatar/${md5(member.email)}?d=404&s=64`}
+                src={`https://www.gravatar.com/avatar/${member.avatarHash}?d=404&s=64`}
                 alt=""
                 class="relative z-10 size-full object-cover"
                 onError={(event) => {

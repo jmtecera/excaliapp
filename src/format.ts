@@ -1,4 +1,4 @@
-import { locale, text } from "./i18n";
+import { text } from "./i18n";
 
 export function formatRelativeTime(timestamp: number | null, now = Date.now()): string {
   if (!timestamp) {
@@ -29,7 +29,7 @@ export function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
   const currentYear = new Date().getFullYear();
 
-  return date.toLocaleDateString(locale === "es" ? "es-AR" : "en", {
+  return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     ...(date.getFullYear() === currentYear ? {} : { year: "numeric" }),
