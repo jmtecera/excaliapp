@@ -21,7 +21,7 @@ export function PinPrompt(props: {
     event.preventDefault();
 
     if (!/^[0-9]{4}$/.test(pin())) {
-      setError(text.pin.invalid);
+      setError(text().pin.invalid);
       return;
     }
 
@@ -42,14 +42,14 @@ export function PinPrompt(props: {
               variant="ghost"
               size="icon"
               type="button"
-              aria-label={text.pin.cancel}
+              aria-label={text().pin.cancel}
               onClick={props.onCancel}
             >
               <X class="size-4" />
             </Button>
           </div>
-          <h2 class="mt-5 text-lg font-semibold tracking-tight">{text.pin.title}</h2>
-          <p class="mt-1 text-sm leading-6 text-muted-foreground">{text.pin.description}</p>
+          <h2 class="mt-5 text-lg font-semibold tracking-tight">{text().pin.title}</h2>
+          <p class="mt-1 text-sm leading-6 text-muted-foreground">{text().pin.description}</p>
           <InputOTP
             class="mt-5 justify-center"
             value={pin()}
@@ -57,7 +57,7 @@ export function PinPrompt(props: {
             maxLength={4}
             pattern={REGEXP_ONLY_DIGITS}
             autofocus
-            aria-label={text.pin.label}
+            aria-label={text().pin.label}
           >
             <InputOTPGroup>
               <InputOTPSlot index={0} />
@@ -73,7 +73,7 @@ export function PinPrompt(props: {
             <Show when={props.busy}>
               <LoaderCircle class="size-4 animate-spin" />
             </Show>
-            {text.pin.submit}
+            {text().pin.submit}
           </Button>
         </form>
       </div>

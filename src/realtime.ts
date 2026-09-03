@@ -9,6 +9,7 @@ const SUPABASE_KEY = String(
     import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY ||
     "",
 ).trim();
+const PRESENCE_HEARTBEAT_MS = 30000;
 
 const client =
   SUPABASE_URL && SUPABASE_KEY
@@ -39,24 +40,42 @@ export function subscribeToRoom({
     },
   });
 
+  let heartbeat = 0;
+  let disposed = false;
+  const updatePresence = () => onPresence(readPresence(channel));
+
   channel
     .on("broadcast", { event: "changed" }, onChanged)
-    .on("presence", { event: "sync" }, () => onPresence(readPresence(channel)))
+    .on("presence", { event: "sync" }, updatePresence)
+    .on("presence", { event: "join" }, updatePresence)
+    .on("presence", { event: "leave" }, updatePresence)
     .subscribe(async (status) => {
       if (status !== "SUBSCRIBED") {
         return;
       }
 
-      await channel.track({
-        clientId: workspace.clientId,
-        name: workspace.memberName,
-        avatarHash: createAvatarHash(workspace.memberEmail),
-        device: workspace.device,
-        lastSeenAt: Date.now(),
-      });
+      const trackPresence = () =>
+        channel.track({
+          clientId: workspace.clientId,
+          name: workspace.memberName,
+          avatarHash: createAvatarHash(workspace.memberEmail),
+          device: workspace.device,
+          lastSeenAt: Date.now(),
+        });
+
+      await trackPresence();
+      if (disposed) {
+        void channel.untrack();
+        return;
+      }
+
+      updatePresence();
+      heartbeat = window.setInterval(() => void trackPresence(), PRESENCE_HEARTBEAT_MS);
     });
 
   return () => {
+    disposed = true;
+    window.clearInterval(heartbeat);
     void channel.untrack();
     void client.removeChannel(channel);
   };

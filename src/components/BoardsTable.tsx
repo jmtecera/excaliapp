@@ -32,18 +32,18 @@ export function BoardsTable(props: BoardsTableProps) {
         fallback={
           <div class="grid min-h-36 place-items-center bg-card px-6 text-center">
             <div>
-              <p class="text-sm font-medium">{props.archived ? text.boards.noArchived : text.boards.noBoards}</p>
+              <p class="text-sm font-medium">{props.archived ? text().boards.noArchived : text().boards.noBoards}</p>
               <p class="mt-1 text-xs text-muted-foreground">
-                {props.archived ? text.boards.archivedHint : text.boards.emptyHint}
+                {props.archived ? text().boards.archivedHint : text().boards.emptyHint}
               </p>
             </div>
           </div>
         }
       >
         <div class="hidden grid-cols-[minmax(0,1fr)_140px_210px] border-b border-border bg-muted/40 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground sm:grid">
-          <span>{text.boards.board}</span>
-          <span>{text.boards.updated}</span>
-          <span class="text-right">{text.boards.actions}</span>
+          <span>{text().boards.board}</span>
+          <span>{text().boards.updated}</span>
+          <span class="text-right">{text().boards.actions}</span>
         </div>
         <div class="divide-y divide-border bg-card">
           <For each={props.boards}>
@@ -113,10 +113,10 @@ function BoardRow(props: {
                 if (event.key === "Escape") setEditing(false);
               }}
             />
-            <Button variant="ghost" size="icon" class="size-8" type="button" onClick={saveName} aria-label={text.boards.saveName}>
+            <Button variant="ghost" size="icon" class="size-8" type="button" onClick={saveName} aria-label={text().boards.saveName}>
               <Check class="size-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" class="size-8" type="button" onClick={() => setEditing(false)} aria-label={text.boards.cancel}>
+            <Button variant="ghost" size="icon" class="size-8" type="button" onClick={() => setEditing(false)} aria-label={text().boards.cancel}>
               <X class="size-3.5" />
             </Button>
           </div>
@@ -126,7 +126,7 @@ function BoardRow(props: {
 
       <div class="flex items-center gap-2 text-xs text-muted-foreground">
         <Show when={props.archived}>
-          <Badge>{text.boards.archived}</Badge>
+          <Badge>{text().boards.archived}</Badge>
         </Show>
         <span>{formatDate(props.board.updatedAt)}</span>
       </div>
@@ -140,19 +140,19 @@ function BoardRow(props: {
           onClick={() => props.onOpen(props.board)}
         >
           <ArrowUpRight class="size-3.5" />
-          {text.boards.openPrimary}
+          {text().boards.openPrimary}
         </Button>
-        <Button variant="ghost" size="icon" type="button" title={text.boards.copy} onClick={() => props.onCopy(props.board)}>
+        <Button variant="ghost" size="icon" type="button" title={text().boards.copy} onClick={() => props.onCopy(props.board)}>
           <Clipboard class="size-4" />
         </Button>
-        <Button variant="ghost" size="icon" type="button" title={text.boards.rename} onClick={() => setEditing(true)}>
+        <Button variant="ghost" size="icon" type="button" title={text().boards.rename} onClick={() => setEditing(true)}>
           <Pencil class="size-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           type="button"
-          title={props.archived ? text.boards.restore : text.boards.archive}
+          title={props.archived ? text().boards.restore : text().boards.archive}
           onClick={() => props.onArchive(props.board)}
         >
           <Show when={props.archived} fallback={<Archive class="size-4" />}>

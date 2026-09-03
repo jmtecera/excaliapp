@@ -1,35 +1,35 @@
-import { text } from "./i18n";
+import { locale, text } from "./i18n";
 
 export function formatRelativeTime(timestamp: number | null, now = Date.now()): string {
   if (!timestamp) {
-    return text.time.never;
+    return text().time.never;
   }
 
   const elapsedMs = now - timestamp;
   const elapsedMinutes = Math.max(0, Math.floor(elapsedMs / 60000));
 
   if (elapsedMinutes < 1) {
-    return text.time.now;
+    return text().time.now;
   }
 
   if (elapsedMinutes < 60) {
-    return text.time.minutesAgo(elapsedMinutes);
+    return text().time.minutesAgo(elapsedMinutes);
   }
 
   const elapsedHours = Math.floor(elapsedMinutes / 60);
 
   if (elapsedHours < 24) {
-    return text.time.hoursAgo(elapsedHours);
+    return text().time.hoursAgo(elapsedHours);
   }
 
-  return text.time.daysAgo(Math.floor(elapsedHours / 24));
+  return text().time.daysAgo(Math.floor(elapsedHours / 24));
 }
 
 export function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
   const currentYear = new Date().getFullYear();
 
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(locale() === "es" ? "es-AR" : "en-US", {
     month: "short",
     day: "numeric",
     ...(date.getFullYear() === currentYear ? {} : { year: "numeric" }),

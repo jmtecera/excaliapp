@@ -10,6 +10,7 @@ const MAX_BOARDS_PER_SYNC = 250;
 const ROOM_CODE_PATTERN = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
 const ACCESS_TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9_-]{8,100}$/;
+const AVATAR_HASH_PATTERN = /^[a-f0-9]{32}$/;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EXCALIDRAW_ROOM_HASH_PATTERN = /^#room=[A-Za-z0-9_-]+,[A-Za-z0-9_-]{22}$/;
@@ -27,6 +28,13 @@ export async function createRoom(payload) {
 export async function syncRoom(roomCode, payload) {
   return callRpc("sync_excalidraw_room_with_timer", {
     ...validateSyncPayload(payload),
+    roomCode: validateRoomCode(roomCode),
+  });
+}
+
+export async function joinRoom(roomCode, payload) {
+  return callRpc("join_excalidraw_room", {
+    ...validateJoinPayload(payload),
     roomCode: validateRoomCode(roomCode),
   });
 }
@@ -152,6 +160,7 @@ function validateCreatePayload(payload) {
   return {
     roomName: optionalTrimmedString(body.roomName, 80) || "Untitled room",
     memberName: requiredTrimmedString(body.memberName, 60, "Participant name"),
+    avatarHash: validateAvatarHash(body.avatarHash),
     clientId: validateClientId(body.clientId),
     device: validateDevice(body.device),
   };
@@ -179,8 +188,20 @@ function validateSyncPayload(payload) {
     accessToken: validateAccessToken(body.accessToken),
     clientId: validateClientId(body.clientId),
     memberName: requiredTrimmedString(body.memberName, 60, "Participant name"),
+    avatarHash: validateAvatarHash(body.avatarHash),
     device: validateDevice(body.device),
     boards: boards.map(validateBoard),
+  };
+}
+
+function validateJoinPayload(payload) {
+  const body = requireObject(payload);
+  return {
+    accessToken: validateAccessToken(body.accessToken),
+    clientId: validateClientId(body.clientId),
+    memberName: requiredTrimmedString(body.memberName, 60, "Participant name"),
+    avatarHash: validateAvatarHash(body.avatarHash),
+    device: validateDevice(body.device),
   };
 }
 
@@ -283,6 +304,16 @@ function validateAccessToken(value) {
   }
 
   return accessToken;
+}
+
+function validateAvatarHash(value) {
+  const avatarHash = String(value || "").trim().toLowerCase();
+
+  if (avatarHash && !AVATAR_HASH_PATTERN.test(avatarHash)) {
+    throw createHttpError(400, "Avatar identifier is invalid.");
+  }
+
+  return avatarHash;
 }
 
 function validateClientId(value) {
@@ -467,7 +498,7 @@ function sanitizeRpcResponse(name, data) {
     : [];
   result.members = Array.isArray(data.members)
     ? data.members.map((member) =>
-        pickDefined(member, ["clientId", "name", "device", "lastSeenAt"]),
+        pickDefined(member, ["clientId", "name", "avatarHash", "device", "lastSeenAt"]),
       )
     : [];
   return result;

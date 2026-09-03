@@ -29,14 +29,15 @@ import {
   RoomPinRequiredError,
   authorizeRoom,
   createSharedRoom,
+  joinWorkspace as joinRemoteWorkspace,
   syncWorkspace as syncRemoteWorkspace,
   updateRoomPin,
   updateRoomPomodoro,
 } from "./sync";
 import type { PomodoroAction, RecentRoom, RoomRecord, Workspace, WorkspaceMember } from "./types";
 import {
-  DEFAULT_ROOM_NAME,
   detectDevice,
+  getDefaultRoomName,
   hasWorkspace,
   isWorkspaceSyncReady,
   normalizeEmail,
@@ -47,12 +48,12 @@ import {
 } from "./workspace";
 
 const AUTO_REFRESH_MS = 15000;
+const INITIAL_SYNC_FRESHNESS_MS = AUTO_REFRESH_MS;
 const PRESENCE_WINDOW_MS = 90000;
 const REALTIME_DEBOUNCE_MS = 100;
 
 type PendingJoin = {
   workspace: Workspace;
-  rooms: RoomRecord[];
 };
 
 export function App() {
@@ -66,7 +67,7 @@ export function App() {
           ...loadedWorkspace,
           roomCode: initialRouteCode,
           roomId: "",
-          roomName: rememberedRoute?.name || DEFAULT_ROOM_NAME,
+          roomName: rememberedRoute?.name || getDefaultRoomName(),
           accessToken: rememberedRoute?.accessToken || "",
           pinEnabled: Boolean(rememberedRoute?.accessToken),
         })
@@ -144,7 +145,7 @@ export function App() {
       remaining === 0
     ) {
       playPomodoroCompleteSound();
-      showToast(text.toast.pomodoroComplete);
+      showToast(text().toast.pomodoroComplete);
     }
 
     previousTimer = {
@@ -154,16 +155,23 @@ export function App() {
     };
   });
 
+  createEffect(() => {
+    const currentWorkspace = workspace();
+    document.documentElement.lang = locale();
+    document.title = inRoom() ? `${currentWorkspace.roomName} · ${text().appName}` : text().appName;
+  });
+
   onMount(() => {
-    document.documentElement.lang = locale;
-    document.title = inRoom() ? `${workspace().roomName} · ${text.appName}` : text.appName;
     const device = detectDevice();
 
     if (workspace().device !== device) {
       updateWorkspace({ ...workspace(), device });
     }
 
-    if (inRoom() && isWorkspaceSyncReady(workspace())) {
+    const lastSyncAt = workspace().lastSyncAt;
+    const needsInitialSync = !lastSyncAt || Date.now() - lastSyncAt > INITIAL_SYNC_FRESHNESS_MS;
+
+    if (inRoom() && isWorkspaceSyncReady(workspace()) && needsInitialSync) {
       void syncRoom({ silent: true });
     }
 
@@ -217,7 +225,7 @@ export function App() {
     try {
       const memberName = requireMemberName(details.name);
       const createdWorkspace = await createSharedRoom({
-        roomName: DEFAULT_ROOM_NAME,
+        roomName: getDefaultRoomName(),
         memberName,
         memberEmail: workspace().memberEmail,
         clientId: workspace().clientId,
@@ -226,10 +234,10 @@ export function App() {
       updateBoards([]);
       updateWorkspace(createdWorkspace);
       refreshRecentRooms();
-      showToast(text.toast.roomCreated);
+      showToast(text().toast.roomCreated);
       return createdWorkspace.roomCode;
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.createRoom));
+      showToast(getErrorMessage(error, text().error.createRoom));
       return "";
     } finally {
       setSyncBusy(false);
@@ -244,11 +252,11 @@ export function App() {
         code,
         name: details.name,
         accessToken: remembered?.accessToken || "",
-        roomName: remembered?.name || DEFAULT_ROOM_NAME,
+        roomName: remembered?.name || getDefaultRoomName(),
       });
       await joinWorkspace(candidate);
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.joinRoom));
+      showToast(getErrorMessage(error, text().error.joinRoom));
     }
   }
 
@@ -262,7 +270,7 @@ export function App() {
       });
       await joinWorkspace(candidate);
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.joinRoom));
+      showToast(getErrorMessage(error, text().error.joinRoom));
     }
   }
 
@@ -270,13 +278,13 @@ export function App() {
     setSyncBusy(true);
 
     try {
-      const result = await syncRemoteWorkspace({ workspace: candidate, rooms: [] });
+      const result = await joinRemoteWorkspace({ workspace: candidate });
       completeJoin(result.workspace, result.rooms);
     } catch (error) {
       if (error instanceof RoomPinRequiredError) {
-        setPendingJoin({ workspace: { ...candidate, accessToken: "" }, rooms: [] });
+        setPendingJoin({ workspace: { ...candidate, accessToken: "" } });
       } else {
-        showToast(getErrorMessage(error, text.error.joinRoom));
+        showToast(getErrorMessage(error, text().error.joinRoom));
       }
     } finally {
       setSyncBusy(false);
@@ -298,14 +306,11 @@ export function App() {
         ...pending.workspace,
         ...authorization,
       });
-      const result = await syncRemoteWorkspace({
-        workspace: authorizedWorkspace,
-        rooms: pending.rooms,
-      });
+      const result = await joinRemoteWorkspace({ workspace: authorizedWorkspace });
       setPendingJoin(null);
       completeJoin(result.workspace, result.rooms);
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.joinRoom));
+      showToast(getErrorMessage(error, text().error.joinRoom));
     } finally {
       setSyncBusy(false);
     }
@@ -325,7 +330,7 @@ export function App() {
     updateWorkspace(nextWorkspace);
     refreshRecentRooms();
     navigateToRoom(nextWorkspace.roomCode);
-    showToast(text.toast.roomJoined);
+    showToast(text().toast.roomJoined);
   }
 
   function createJoinWorkspace({
@@ -373,7 +378,7 @@ export function App() {
       });
       void syncRoom({ silent: true });
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.renameRoom));
+      showToast(getErrorMessage(error, text().error.renameRoom));
     }
   }
 
@@ -386,15 +391,15 @@ export function App() {
         device: detectDevice(),
       });
       void syncRoom({ silent: true });
-      showToast(text.toast.profileUpdated);
+      showToast(text().toast.profileUpdated);
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.updateProfile));
+      showToast(getErrorMessage(error, text().error.updateProfile));
     }
   }
 
   async function handleUpdatePin(pin: string | null) {
     if (pin !== null && !/^[0-9]{4}$/.test(pin)) {
-      showToast(text.error.pinFormat);
+      showToast(text().error.pinFormat);
       return;
     }
 
@@ -411,16 +416,16 @@ export function App() {
       showToast(
         result.pinEnabled
           ? wasEnabled
-            ? text.toast.pinChanged
-            : text.toast.pinEnabled
-          : text.toast.pinDisabled,
+            ? text().toast.pinChanged
+            : text().toast.pinEnabled
+          : text().toast.pinDisabled,
       );
       void syncRoom({ silent: true });
     } catch (error) {
       if (error instanceof RoomPinRequiredError) {
-        setPendingJoin({ workspace: { ...workspace(), accessToken: "" }, rooms: boards() });
+        setPendingJoin({ workspace: { ...workspace(), accessToken: "" } });
       }
-      showToast(getErrorMessage(error, text.error.pinUpdate));
+      showToast(getErrorMessage(error, text().error.pinUpdate));
     } finally {
       setSyncBusy(false);
     }
@@ -462,9 +467,9 @@ export function App() {
       });
     } catch (error) {
       if (error instanceof RoomPinRequiredError) {
-        setPendingJoin({ workspace: { ...workspace(), accessToken: "" }, rooms: boards() });
+        setPendingJoin({ workspace: { ...workspace(), accessToken: "" } });
       }
-      showToast(getErrorMessage(error, text.error.timerUpdate));
+      showToast(getErrorMessage(error, text().error.timerUpdate));
     } finally {
       setSyncBusy(false);
     }
@@ -477,9 +482,9 @@ export function App() {
       updateBoards([board, ...boards()]);
       window.open(board.excalidrawUrl, "_blank", "noopener,noreferrer");
       void syncRoom({ silent: true });
-      showToast(text.toast.boardCreated);
+      showToast(text().toast.boardCreated);
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.createBoard));
+      showToast(getErrorMessage(error, text().error.createBoard));
     }
   }
 
@@ -488,9 +493,9 @@ export function App() {
       const board = createRoomRecordFromUrl({ name: details.name, url: details.url });
       updateBoards([board, ...boards()]);
       void syncRoom({ silent: true });
-      showToast(text.toast.boardAdded);
+      showToast(text().toast.boardAdded);
     } catch (error) {
-      showToast(getErrorMessage(error, text.error.addBoard));
+      showToast(getErrorMessage(error, text().error.addBoard));
     }
   }
 
@@ -520,7 +525,7 @@ export function App() {
       ),
     );
     void syncRoom({ silent: true });
-    showToast(board.archived ? text.toast.boardRestored : text.toast.boardArchived);
+    showToast(board.archived ? text().toast.boardRestored : text().toast.boardArchived);
   }
 
   function handleRenameBoard(board: RoomRecord, name: string) {
@@ -540,7 +545,7 @@ export function App() {
 
   async function syncRoom({ silent = false } = {}) {
     if (!isWorkspaceSyncReady(workspace())) {
-      if (!silent) showToast(text.toast.enterNameToSync);
+      if (!silent) showToast(text().toast.enterNameToSync);
       return;
     }
 
@@ -555,18 +560,18 @@ export function App() {
       const result = await syncRemoteWorkspace({ workspace: workspace(), rooms: boards() });
       updateBoards(result.rooms);
       updateWorkspace(result.workspace);
-      if (!silent) showToast(text.toast.roomRefreshed);
+      if (!silent) showToast(text().toast.roomRefreshed);
     } catch (error) {
       if (error instanceof RoomPinRequiredError) {
-        setPendingJoin({ workspace: { ...workspace(), accessToken: "" }, rooms: boards() });
+        setPendingJoin({ workspace: { ...workspace(), accessToken: "" } });
         return;
       }
 
       updateWorkspace({
         ...workspace(),
-        lastError: getErrorMessage(error, text.error.sync),
+        lastError: getErrorMessage(error, text().error.sync),
       });
-      if (!silent) showToast(getErrorMessage(error, text.error.sync));
+      if (!silent) showToast(getErrorMessage(error, text().error.sync));
     } finally {
       setSyncBusy(false);
 
@@ -587,7 +592,7 @@ export function App() {
   function updateWorkspace(nextWorkspace: Workspace) {
     const saved = saveWorkspace(normalizeWorkspace(nextWorkspace));
     setWorkspace(saved);
-    document.title = hasWorkspace(saved) ? `${saved.roomName} · ${text.appName}` : text.appName;
+    document.title = hasWorkspace(saved) ? `${saved.roomName} · ${text().appName}` : text().appName;
   }
 
   function updateBoards(nextBoards: RoomRecord[]) {
@@ -639,11 +644,11 @@ export function App() {
           onRefresh={() => void syncRoom()}
           onCopyCode={() => {
             void writeClipboard(workspace().roomCode);
-            showToast(text.toast.roomCodeCopied);
+            showToast(text().toast.roomCodeCopied);
           }}
           onCopyInvite={() => {
             void writeClipboard(new URL(`/room/${workspace().roomCode}`, window.location.origin).toString());
-            showToast(text.toast.inviteCopied);
+            showToast(text().toast.inviteCopied);
           }}
           onRenameRoom={handleRenameRoom}
           onUpdateProfile={handleUpdateProfile}
@@ -655,7 +660,7 @@ export function App() {
           onOpenBoard={handleOpenBoard}
           onCopyBoard={(board) => {
             void writeClipboard(board.excalidrawUrl);
-            showToast(text.toast.boardLinkCopied);
+            showToast(text().toast.boardLinkCopied);
           }}
           onArchiveBoard={handleArchiveBoard}
           onRenameBoard={handleRenameBoard}
@@ -724,7 +729,7 @@ function requireMemberName(name: unknown): string {
   const value = normalizeMemberName(name);
 
   if (!value) {
-    throw new Error(text.error.nameRequired);
+    throw new Error(text().error.nameRequired);
   }
 
   return value;

@@ -7,7 +7,9 @@ const ROOM_CODE_PATTERN = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
 const DEFAULT_POMODORO_SECONDS = 25 * 60;
 const MAX_POMODORO_SECONDS = 120 * 60;
 
-export const DEFAULT_ROOM_NAME = text.defaultRoomName;
+export function getDefaultRoomName(): string {
+  return text().defaultRoomName;
+}
 
 export function emptyWorkspace(): Workspace {
   return normalizeWorkspace({});
@@ -103,7 +105,7 @@ export function requireRoomCode(code: unknown): string {
   const value = normalizeRoomCode(code);
 
   if (!ROOM_CODE_PATTERN.test(value)) {
-    throw new Error(text.error.codeFormat);
+    throw new Error(text().error.codeFormat);
   }
 
   return value;
@@ -111,14 +113,14 @@ export function requireRoomCode(code: unknown): string {
 
 export function normalizeRoomName(name: unknown): string {
   const value = String(name || "").trim();
-  return (value || DEFAULT_ROOM_NAME).slice(0, 80);
+  return (value || getDefaultRoomName()).slice(0, 80);
 }
 
 export function requireRoomName(name: unknown): string {
   const value = String(name || "").trim().slice(0, 80);
 
   if (!value) {
-    throw new Error(text.error.roomNameRequired);
+    throw new Error(text().error.roomNameRequired);
   }
 
   return value;

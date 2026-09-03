@@ -18,10 +18,10 @@ export function PomodoroCard(props: {
     () => props.workspace.pomodoroStatus === "running" && seconds() > 0,
   );
   const statusLabel = createMemo(() => {
-    if (running()) return text.pomodoro.focusing;
-    if (props.workspace.pomodoroStatus === "paused" && seconds() > 0) return text.pomodoro.paused;
-    if (seconds() === 0) return text.pomodoro.complete;
-    return text.pomodoro.ready;
+    if (running()) return text().pomodoro.focusing;
+    if (props.workspace.pomodoroStatus === "paused" && seconds() > 0) return text().pomodoro.paused;
+    if (seconds() === 0) return text().pomodoro.complete;
+    return text().pomodoro.ready;
   });
 
   return (
@@ -33,14 +33,14 @@ export function PomodoroCard(props: {
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <p class="text-sm font-semibold tracking-tight">{text.pomodoro.title}</p>
+              <p class="text-sm font-semibold tracking-tight">{text().pomodoro.title}</p>
               <Badge>{statusLabel()}</Badge>
             </div>
             <p class="mt-1 truncate text-xs text-muted-foreground">
-              {text.pomodoro.description(Math.round(props.workspace.pomodoroDurationSeconds / 60))}
+              {text().pomodoro.description(Math.round(props.workspace.pomodoroDurationSeconds / 60))}
             </p>
             <p class="mt-1 text-[11px] text-muted-foreground">
-              {text.pomodoro.totalWorked}: <span class="font-medium text-foreground">{formatWorkedTime(totalSeconds())}</span>
+              {text().pomodoro.totalWorked}: <span class="font-medium text-foreground">{formatWorkedTime(totalSeconds())}</span>
             </p>
           </div>
         </div>
@@ -60,14 +60,14 @@ export function PomodoroCard(props: {
               <Show when={running()} fallback={<Play class="size-3.5" />}>
                 <Pause class="size-3.5" />
               </Show>
-              {running() ? text.pomodoro.pause : text.pomodoro.start}
+              {running() ? text().pomodoro.pause : text().pomodoro.start}
             </Button>
             <Button
               variant="ghost"
               size="icon"
               class="size-8"
               type="button"
-              title={text.pomodoro.reset}
+              title={text().pomodoro.reset}
               disabled={props.busy}
               onClick={() => void props.onAction("reset")}
             >

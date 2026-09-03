@@ -22,6 +22,49 @@ test("validates room codes and request payloads before calling Supabase", async 
     () => api.updateRoomPin("ABC-123", { accessToken: "", pin: "12345" }),
     /PIN must be exactly 4 digits/,
   );
+  await assert.rejects(
+    () =>
+      api.joinRoom("ABC-123", {
+        accessToken: "",
+        clientId: "client_123",
+        memberName: "Ada",
+        avatarHash: "not-a-hash",
+        device: "desktop",
+      }),
+    /Avatar identifier/,
+  );
+});
+
+test("uses the lightweight room join RPC without sending board data", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestUrl;
+  let rpcPayload;
+
+  globalThis.fetch = async (url, init) => {
+    requestUrl = String(url);
+    rpcPayload = JSON.parse(String(init.body)).payload;
+    return new Response(
+      JSON.stringify({ roomId: "047d9561-5a36-4c0b-a78f-67c24c99e067", roomCode: "ABC-123" }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    await api.joinRoom("abc-123", {
+      accessToken: "",
+      clientId: "client_123",
+      memberName: "Ada",
+      avatarHash: "0123456789abcdef0123456789abcdef",
+      device: "desktop",
+    });
+
+    assert.equal(requestUrl.endsWith("/rest/v1/rpc/join_excalidraw_room"), true);
+    assert.equal(rpcPayload.roomCode, "ABC-123");
+    assert.equal(rpcPayload.avatarHash, "0123456789abcdef0123456789abcdef");
+    assert.equal("boards" in rpcPayload, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("sanitizes shared member data and discards unrecognized sync fields", async () => {
@@ -40,6 +83,7 @@ test("sanitizes shared member data and discards unrecognized sync fields", async
             clientId: "client_123",
             name: "Ada",
             email: "ada@example.com",
+            avatarHash: "0123456789abcdef0123456789abcdef",
             device: "desktop",
           },
         ],
@@ -56,6 +100,7 @@ test("sanitizes shared member data and discards unrecognized sync fields", async
       accessToken: "",
       clientId: "client_123",
       memberName: "Ada",
+      avatarHash: "0123456789abcdef0123456789abcdef",
       memberEmail: "ada@example.com",
       device: "desktop",
       boards: [
@@ -73,7 +118,9 @@ test("sanitizes shared member data and discards unrecognized sync fields", async
 
     assert.equal(rpcPayload.roomCode, "ABC-123");
     assert.equal("memberEmail" in rpcPayload, false);
+    assert.equal(rpcPayload.avatarHash, "0123456789abcdef0123456789abcdef");
     assert.equal("email" in result.members[0], false);
+    assert.equal(result.members[0].avatarHash, "0123456789abcdef0123456789abcdef");
     assert.equal("internalDebugValue" in result, false);
   } finally {
     globalThis.fetch = originalFetch;

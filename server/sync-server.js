@@ -5,6 +5,7 @@ import {
   authorizeRoom,
   createRoom,
   getErrorResponse,
+  joinRoom,
   isSupabaseConfigured,
   readRequestBody,
   sendJson,
@@ -33,6 +34,13 @@ const server = createServer(async (request, response) => {
     }
 
     const syncMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/sync$/i);
+    const joinMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/join$/i);
+
+    if (request.method === "POST" && joinMatch?.[1]) {
+      sendJson(response, 200, await joinRoom(joinMatch[1].toUpperCase(), await readRequestBody(request)));
+      return;
+    }
+
     const authorizeMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/authorize$/i);
     const pinMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/pin$/i);
     const timerMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{3}-[A-Z0-9]{3})\/timer$/i);

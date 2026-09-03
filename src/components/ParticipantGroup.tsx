@@ -17,16 +17,20 @@ export function ParticipantGroup(props: { members: WorkspaceMember[]; selfId: st
               member.clientId === props.selfId && "ring-1 ring-foreground ring-offset-1 ring-offset-background",
             )}
             style={{ "z-index": String(visibleLimit - index()) }}
-            title={`${member.name}${member.clientId === props.selfId ? ` (${text.participant.you})` : ""}`}
+            title={`${member.name}${member.clientId === props.selfId ? ` (${text().participant.you})` : ""}`}
           >
             <Show
               when={member.avatarHash}
               fallback={<span>{initials(member.name)}</span>}
             >
               <img
-                src={`https://www.gravatar.com/avatar/${member.avatarHash}?d=404&s=64`}
+                src={`https://www.gravatar.com/avatar/${member.avatarHash}?d=identicon&s=64&r=g`}
                 alt=""
                 class="relative z-10 size-full object-cover"
+                decoding="async"
+                width="64"
+                height="64"
+                referrerpolicy="no-referrer"
                 onError={(event) => {
                   event.currentTarget.style.display = "none";
                 }}

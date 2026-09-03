@@ -31,7 +31,7 @@ export function importBoardsCsv(csv: string): CsvImportResult {
   const rows = parseCsv(csv);
 
   if (rows.length === 0) {
-    return { boards: [], errors: [{ row: 1, message: text.csv.empty }] };
+    return { boards: [], errors: [{ row: 1, message: text().csv.empty }] };
   }
 
   const header = rows[0]?.map((cell) => cell.trim().toLowerCase()) || [];
@@ -40,7 +40,7 @@ export function importBoardsCsv(csv: string): CsvImportResult {
   if (missingColumns.length > 0) {
     return {
       boards: [],
-      errors: [{ row: 1, message: text.csv.missingColumns(missingColumns) }],
+      errors: [{ row: 1, message: text().csv.missingColumns(missingColumns) }],
     };
   }
 
@@ -62,12 +62,12 @@ export function importBoardsCsv(csv: string): CsvImportResult {
     const archivedValue = (row[archivedIndex] || "").trim().toLowerCase();
 
     if (!boardName) {
-      errors.push({ row: index + 1, message: text.csv.nameRequired });
+      errors.push({ row: index + 1, message: text().csv.nameRequired });
       continue;
     }
 
     if (!["", "true", "false", "1", "0", "yes", "no"].includes(archivedValue)) {
-      errors.push({ row: index + 1, message: text.csv.archivedBoolean });
+      errors.push({ row: index + 1, message: text().csv.archivedBoolean });
       continue;
     }
 
@@ -82,7 +82,7 @@ export function importBoardsCsv(csv: string): CsvImportResult {
     } catch (error) {
       errors.push({
         row: index + 1,
-        message: error instanceof Error ? error.message : text.csv.invalidUrl,
+        message: error instanceof Error ? error.message : text().csv.invalidUrl,
       });
     }
   }

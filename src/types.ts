@@ -56,6 +56,7 @@ export type SyncPayload = {
   roomName?: string;
   roomNameUpdatedAt?: number;
   accessToken?: string;
+  avatarHash?: string;
   pinEnabled?: boolean;
   pinRequired?: boolean;
   pomodoroStatus?: PomodoroStatus;

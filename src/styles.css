@@ -17,7 +17,9 @@
   --color-destructive: var(--destructive);
 }
 
-:root {
+:root,
+:root[data-theme="dark"],
+:root[data-theme="system"] {
   color-scheme: dark;
   --background: #000000;
   --foreground: #ededed;
@@ -31,6 +33,40 @@
   --primary: #ededed;
   --primary-foreground: #050505;
   --destructive: #f87171;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #fafaf9;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
+  --input: #d4d4d8;
+  --ring: rgb(24 24 27 / 0.18);
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --destructive: #dc2626;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    color-scheme: light;
+    --background: #fafaf9;
+    --foreground: #18181b;
+    --card: #ffffff;
+    --card-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --border: #e4e4e7;
+    --input: #d4d4d8;
+    --ring: rgb(24 24 27 / 0.18);
+    --primary: #18181b;
+    --primary-foreground: #fafafa;
+    --destructive: #dc2626;
+  }
 }
 
 * {
@@ -83,14 +119,6 @@ summary:focus-visible {
 ::selection {
   background: var(--foreground);
   color: var(--background);
-}
-
-.landing-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, black 0%, transparent 82%);
 }
 
 .modal-backdrop {

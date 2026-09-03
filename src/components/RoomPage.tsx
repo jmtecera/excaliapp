@@ -28,6 +28,7 @@ import { BoardsTable } from "./BoardsTable";
 import { BrandMark } from "./BrandMark";
 import { ParticipantGroup } from "./ParticipantGroup";
 import { PomodoroCard } from "./PomodoroCard";
+import { PreferencesMenu } from "./PreferencesMenu";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Dialog } from "./ui/dialog";
@@ -145,7 +146,7 @@ export function RoomPage(props: RoomPageProps) {
     }
 
     setImportSummary(
-      text.room.imported(result.boards.length, result.errors.length),
+      text().room.imported(result.boards.length, result.errors.length),
     );
     input.value = "";
   }
@@ -187,7 +188,7 @@ export function RoomPage(props: RoomPageProps) {
     <main class="min-h-dvh bg-background">
       <header class="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
         <div class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6 lg:px-8">
-          <Button variant="ghost" size="icon" type="button" title={text.room.leave} onClick={props.onLeave}>
+          <Button variant="ghost" size="icon" type="button" title={text().room.leave} onClick={props.onLeave}>
             <ArrowLeft class="size-4" />
           </Button>
           <BrandMark />
@@ -216,10 +217,10 @@ export function RoomPage(props: RoomPageProps) {
                     if (event.key === "Escape") setEditingRoomName(false);
                   }}
                 />
-                <Button variant="ghost" size="icon" class="size-8" onClick={saveRoomName} aria-label={text.room.saveName}>
+                <Button variant="ghost" size="icon" class="size-8" onClick={saveRoomName} aria-label={text().room.saveName}>
                   <Check class="size-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" class="size-8" onClick={() => setEditingRoomName(false)} aria-label={text.room.cancel}>
+                <Button variant="ghost" size="icon" class="size-8" onClick={() => setEditingRoomName(false)} aria-label={text().room.cancel}>
                   <X class="size-3.5" />
                 </Button>
               </div>
@@ -238,11 +239,12 @@ export function RoomPage(props: RoomPageProps) {
             <ParticipantGroup members={props.workspace.members} selfId={props.workspace.clientId} />
             <div class="h-5 w-px bg-border" />
           </div>
+          <PreferencesMenu />
           <Button
             variant="ghost"
             size="icon"
             type="button"
-            title={text.room.refresh}
+            title={text().room.refresh}
             disabled={props.busy}
             onClick={props.onRefresh}
           >
@@ -256,8 +258,8 @@ export function RoomPage(props: RoomPageProps) {
           <div>
             <div class="mb-5 flex items-end justify-between gap-4">
               <div>
-                <p class="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{text.room.newBoard}</p>
-                <h1 class="mt-2 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{text.room.question}</h1>
+                <p class="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{text().room.newBoard}</p>
+                <h1 class="mt-2 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{text().room.question}</h1>
               </div>
               <div class="sm:hidden">
                 <ParticipantGroup members={props.workspace.members} selfId={props.workspace.clientId} />
@@ -272,7 +274,7 @@ export function RoomPage(props: RoomPageProps) {
                 class="h-14 flex-1 border-transparent bg-transparent px-4 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0"
                 value={boardName()}
                 maxlength={80}
-                placeholder={text.room.boardName}
+                placeholder={text().room.boardName}
                 autofocus
                 onInput={(event) => setBoardName(event.currentTarget.value)}
               />
@@ -280,14 +282,14 @@ export function RoomPage(props: RoomPageProps) {
                 <Show when={props.busy} fallback={<Plus class="size-4" />}>
                   <LoaderCircle class="size-4 animate-spin" />
                 </Show>
-                {text.room.createBoard}
+                {text().room.createBoard}
               </Button>
             </form>
 
             <details class="group mt-3">
               <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
                 <Link2 class="size-3.5" />
-                {text.room.addExisting}
+                {text().room.addExisting}
                 <ChevronDown class="size-3 transition-transform group-open:rotate-180" />
               </summary>
               <form
@@ -297,7 +299,7 @@ export function RoomPage(props: RoomPageProps) {
                 <Input
                   value={existingName()}
                   maxlength={80}
-                  placeholder={text.room.boardName}
+                  placeholder={text().room.boardName}
                   onInput={(event) => setExistingName(event.currentTarget.value)}
                 />
                 <Input
@@ -306,7 +308,7 @@ export function RoomPage(props: RoomPageProps) {
                   spellcheck={false}
                   onInput={(event) => setExistingUrl(event.currentTarget.value)}
                 />
-                <Button variant="secondary" type="submit">{text.room.addLink}</Button>
+                <Button variant="secondary" type="submit">{text().room.addLink}</Button>
               </form>
             </details>
 
@@ -323,14 +325,14 @@ export function RoomPage(props: RoomPageProps) {
           <aside class="rounded-xl border border-border bg-card p-5">
             <div class="flex items-start justify-between">
               <div>
-                <p class="text-sm font-semibold">{text.room.details}</p>
-                <p class="mt-1 text-xs text-muted-foreground">{text.room.shareHint}</p>
+                <p class="text-sm font-semibold">{text().room.details}</p>
+                <p class="mt-1 text-xs text-muted-foreground">{text().room.shareHint}</p>
               </div>
               <Badge class={props.workspace.lastError ? "text-destructive" : ""}>
                 <Show when={props.workspace.lastError} fallback={<Cloud class="mr-1 size-3" />}>
                   <CloudOff class="mr-1 size-3" />
                 </Show>
-                {props.workspace.lastError ? text.room.offline : text.room.synced}
+                {props.workspace.lastError ? text().room.offline : text().room.synced}
               </Badge>
             </div>
             <button
@@ -339,36 +341,36 @@ export function RoomPage(props: RoomPageProps) {
               onClick={props.onCopyCode}
             >
               <div>
-                <p class="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{text.room.roomCode}</p>
+                <p class="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{text().room.roomCode}</p>
                 <p class="mt-1 font-mono text-lg font-semibold tracking-[0.2em]">{props.workspace.roomCode}</p>
               </div>
               <Clipboard class="size-4 text-muted-foreground" />
             </button>
             <Button class="mt-2 w-full" variant="secondary" size="sm" type="button" onClick={props.onCopyInvite}>
               <Link2 class="size-3.5" />
-              {text.room.copyInvite}
+              {text().room.copyInvite}
             </Button>
             <p class="mt-4 text-xs leading-5 text-muted-foreground">
               {props.workspace.lastSyncAt
-                ? `${text.room.updated} ${formatRelativeTime(props.workspace.lastSyncAt, props.now)}`
-                : text.room.waitingSync}
+                ? `${text().room.updated} ${formatRelativeTime(props.workspace.lastSyncAt, props.now)}`
+                : text().room.waitingSync}
             </p>
 
             <details class="group mt-5 border-t border-border pt-4">
               <summary class="flex cursor-pointer list-none items-center justify-between text-xs font-medium">
-                <span class="flex items-center gap-2"><Settings2 class="size-3.5" />{text.room.profile}</span>
+                <span class="flex items-center gap-2"><Settings2 class="size-3.5" />{text().room.profile}</span>
                 <ChevronDown class="size-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
               </summary>
               <div class="mt-3 grid gap-2">
-                <Input value={profileName()} maxlength={60} onInput={(event) => setProfileName(event.currentTarget.value)} placeholder={text.landing.name} />
-                <Input value={profileEmail()} maxlength={254} type="email" onInput={(event) => setProfileEmail(event.currentTarget.value)} placeholder={text.room.email} />
+                <Input value={profileName()} maxlength={60} onInput={(event) => setProfileName(event.currentTarget.value)} placeholder={text().landing.name} />
+                <Input value={profileEmail()} maxlength={254} type="email" onInput={(event) => setProfileEmail(event.currentTarget.value)} placeholder={text().room.email} />
                 <Button
                   variant="secondary"
                   size="sm"
                   type="button"
                   onClick={() => props.onUpdateProfile({ name: profileName(), email: normalizeEmail(profileEmail()) })}
                 >
-                  {text.room.saveProfile}
+                  {text().room.saveProfile}
                 </Button>
               </div>
             </details>
@@ -378,8 +380,8 @@ export function RoomPage(props: RoomPageProps) {
               class="mt-4 flex w-full items-center justify-between border-t border-border pt-4 text-xs font-medium"
               onClick={() => setSettingsOpen(true)}
             >
-              <span class="flex items-center gap-2"><LockKeyhole class="size-3.5" />{text.room.settings}</span>
-              <span class="text-muted-foreground">{text.room.openSettings}</span>
+              <span class="flex items-center gap-2"><LockKeyhole class="size-3.5" />{text().room.settings}</span>
+              <span class="text-muted-foreground">{text().room.openSettings}</span>
             </button>
           </aside>
         </section>
@@ -387,13 +389,13 @@ export function RoomPage(props: RoomPageProps) {
         <Dialog
           open={settingsOpen()}
           onOpenChange={setSettingsOpen}
-          title={text.room.settings}
-          description={text.room.settingsDescription}
+          title={text().room.settings}
+          description={text().room.settingsDescription}
         >
           <div class="grid gap-6">
             <section>
-              <p class="text-sm font-medium">{text.room.roomName}</p>
-              <p class="mt-1 text-xs leading-5 text-muted-foreground">{text.room.roomNameDescription}</p>
+              <p class="text-sm font-medium">{text().room.roomName}</p>
+              <p class="mt-1 text-xs leading-5 text-muted-foreground">{text().room.roomNameDescription}</p>
               <div class="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <Input
                   value={roomName()}
@@ -409,7 +411,7 @@ export function RoomPage(props: RoomPageProps) {
                   disabled={!roomName().trim() || roomName().trim() === props.workspace.roomName}
                   onClick={saveRoomName}
                 >
-                  {text.room.saveName}
+                  {text().room.saveName}
                 </Button>
               </div>
             </section>
@@ -417,10 +419,10 @@ export function RoomPage(props: RoomPageProps) {
             <section class="border-t border-border pt-5">
               <div class="flex items-center gap-2">
                 <Clock3 class="size-4 text-muted-foreground" />
-                <p class="text-sm font-medium">{text.pomodoro.settingsTitle}</p>
+                <p class="text-sm font-medium">{text().pomodoro.settingsTitle}</p>
               </div>
               <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                {text.pomodoro.settingsDescription}
+                {text().pomodoro.settingsDescription}
               </p>
               <div class="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <Input
@@ -429,7 +431,7 @@ export function RoomPage(props: RoomPageProps) {
                   min="1"
                   max="120"
                   inputmode="numeric"
-                  aria-label={text.pomodoro.duration}
+                  aria-label={text().pomodoro.duration}
                   onInput={(event) => setDurationMinutes(event.currentTarget.value)}
                 />
                 <Button
@@ -445,14 +447,14 @@ export function RoomPage(props: RoomPageProps) {
                   }
                   onClick={() => void savePomodoroDuration()}
                 >
-                  {text.pomodoro.saveDuration}
+                  {text().pomodoro.saveDuration}
                 </Button>
               </div>
-              <p class="mt-1 text-[11px] text-muted-foreground">{text.pomodoro.durationRange}</p>
+              <p class="mt-1 text-[11px] text-muted-foreground">{text().pomodoro.durationRange}</p>
               <div class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
                 <div>
                   <p class="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    {text.pomodoro.totalWorked}
+                    {text().pomodoro.totalWorked}
                   </p>
                   <p class="mt-1 font-mono text-base font-semibold tabular-nums">
                     {formatWorkedTime(totalWorkedSeconds())}
@@ -465,17 +467,17 @@ export function RoomPage(props: RoomPageProps) {
                   disabled={props.busy || totalWorkedSeconds() === 0}
                   onClick={() => void props.onPomodoroAction("reset-total")}
                 >
-                  {text.pomodoro.resetTotal}
+                  {text().pomodoro.resetTotal}
                 </Button>
               </div>
             </section>
 
             <section class="border-t border-border pt-5">
               <div class="flex items-center justify-between gap-3">
-                <p class="text-sm font-medium">{text.room.pinProtection}</p>
-                <Badge>{props.workspace.pinEnabled ? text.room.pinEnabled : text.room.pinDisabled}</Badge>
+                <p class="text-sm font-medium">{text().room.pinProtection}</p>
+                <Badge>{props.workspace.pinEnabled ? text().room.pinEnabled : text().room.pinDisabled}</Badge>
               </div>
-              <p class="mt-1 text-xs leading-5 text-muted-foreground">{text.room.pinDescription}</p>
+              <p class="mt-1 text-xs leading-5 text-muted-foreground">{text().room.pinDescription}</p>
               <InputOTP
                 class="mt-3"
                 value={pin()}
@@ -483,7 +485,7 @@ export function RoomPage(props: RoomPageProps) {
                 maxLength={4}
                 pattern={REGEXP_ONLY_DIGITS}
                 disabled={props.busy}
-                aria-label={text.room.pinPlaceholder}
+                aria-label={text().room.pinPlaceholder}
               >
                 <InputOTPGroup>
                   <InputOTPSlot index={0} />
@@ -499,7 +501,7 @@ export function RoomPage(props: RoomPageProps) {
                   disabled={props.busy || pin().length !== 4}
                   onClick={() => void savePin()}
                 >
-                  {props.workspace.pinEnabled ? text.room.changePin : text.room.enablePin}
+                  {props.workspace.pinEnabled ? text().room.changePin : text().room.enablePin}
                 </Button>
                 <Show when={props.workspace.pinEnabled}>
                   <Button
@@ -508,7 +510,7 @@ export function RoomPage(props: RoomPageProps) {
                     disabled={props.busy}
                     onClick={() => void disablePin()}
                   >
-                    {text.room.disablePin}
+                    {text().room.disablePin}
                   </Button>
                 </Show>
               </div>
@@ -526,7 +528,7 @@ export function RoomPage(props: RoomPageProps) {
                 }`}
                 onClick={() => setView("active")}
               >
-                {text.room.active} <span class="ml-1 text-muted-foreground">{activeBoards().length}</span>
+                {text().room.active} <span class="ml-1 text-muted-foreground">{activeBoards().length}</span>
               </button>
               <button
                 type="button"
@@ -535,7 +537,7 @@ export function RoomPage(props: RoomPageProps) {
                 }`}
                 onClick={() => setView("archived")}
               >
-                {text.room.archived} <span class="ml-1 text-muted-foreground">{archivedBoards().length}</span>
+                {text().room.archived} <span class="ml-1 text-muted-foreground">{archivedBoards().length}</span>
               </button>
             </div>
 
@@ -543,7 +545,7 @@ export function RoomPage(props: RoomPageProps) {
               <input ref={fileInput} class="hidden" type="file" accept=".csv,text/csv" onChange={(event) => void importCsvFile(event)} />
               <Button variant="secondary" size="sm" type="button" onClick={() => fileInput.click()}>
                 <Upload class="size-3.5" />
-                {text.room.importCsv}
+                {text().room.importCsv}
               </Button>
               <Button
                 variant="secondary"
@@ -558,7 +560,7 @@ export function RoomPage(props: RoomPageProps) {
                 }
               >
                 <Download class="size-3.5" />
-                {text.room.exportCsv}
+                {text().room.exportCsv}
               </Button>
             </div>
           </div>
@@ -574,10 +576,10 @@ export function RoomPage(props: RoomPageProps) {
               <Show when={importErrors().length > 0}>
                 <ul class="mt-2 space-y-1 text-muted-foreground">
                   <For each={importErrors().slice(0, 5)}>
-                    {(error) => <li>{text.room.row} {error.row}: {error.message}</li>}
+                    {(error) => <li>{text().room.row} {error.row}: {error.message}</li>}
                   </For>
                   <Show when={importErrors().length > 5}>
-                    <li>{text.room.moreInvalid(importErrors().length - 5)}</li>
+                    <li>{text().room.moreInvalid(importErrors().length - 5)}</li>
                   </Show>
                 </ul>
               </Show>
@@ -586,15 +588,15 @@ export function RoomPage(props: RoomPageProps) {
 
           <Show when={view() === "active" && latestBoard()}>
             {(board) => (
-              <div class="relative mb-4 overflow-hidden rounded-xl border border-white/20 border-l-2 border-l-white/60 bg-muted/35 shadow-lg shadow-black/30">
+              <div class="relative mb-4 overflow-hidden rounded-xl border border-border bg-muted/35 shadow-lg shadow-black/20">
                 <div class="grid gap-6 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-6">
                   <div class="min-w-0">
                     <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      {text.room.latestBoard}
+                      {text().room.latestBoard}
                     </p>
                     <h2 class="mt-2 truncate text-xl font-semibold tracking-tight">{board().name}</h2>
                     <p class="mt-1 truncate font-mono text-[11px] text-muted-foreground">{board().excalidrawUrl}</p>
-                    <p class="mt-3 text-xs text-muted-foreground">{text.room.latestBoardHint}</p>
+                    <p class="mt-3 text-xs text-muted-foreground">{text().room.latestBoardHint}</p>
                   </div>
                   <div class="flex items-center gap-2">
                     <Button
@@ -603,14 +605,14 @@ export function RoomPage(props: RoomPageProps) {
                       onClick={() => props.onOpenBoard(board())}
                     >
                       <ExternalLink class="size-4" />
-                      {text.boards.open}
+                      {text().boards.open}
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       class="size-12"
                       type="button"
-                      title={text.boards.copy}
+                      title={text().boards.copy}
                       onClick={() => props.onCopyBoard(board())}
                     >
                       <Clipboard class="size-4" />

@@ -1,6 +1,6 @@
 # Excaliapp Rooms
 
-Excaliapp Rooms is a dark-mode web app for organizing shared Excalidraw boards. A room has a short code, a shared board list, participant presence, an optional PIN, and a synchronized Pomodoro timer.
+Excaliapp Rooms is a web app for organizing shared Excalidraw boards. A room has a short code, a shared board list, participant presence, an optional PIN, and a synchronized Pomodoro timer. The interface starts in Spanish and remembers the selected language and dark, light, or system theme.
 
 ## Stack
 
@@ -82,7 +82,7 @@ Room codes are capability links. Anyone with the code can join an unprotected ro
 
 PIN checks, timer changes, board synchronization, and room updates are enforced in server-side Supabase functions. PIN failures are throttled per room and request source. Access tokens are stored as SHA-256 hashes in Postgres and expire after 90 days.
 
-Excalidraw collaboration links contain the board encryption key. They are shared only with members who can access the room. Participant email addresses stay in the browser. Realtime presence shares only the normalized MD5 identifier required to load the participant's Gravatar.
+Excalidraw collaboration links contain the board encryption key. They are shared only with members who can access the room. Participant email addresses stay in the browser. Realtime presence and the room roster share only the normalized MD5 identifier required to load the participant's Gravatar.
 
 ## Deployment
 

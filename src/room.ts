@@ -23,7 +23,7 @@ export async function generateCollaborationLinkData(): Promise<RoomData> {
   const jwk = await crypto.subtle.exportKey("jwk", cryptoKey);
 
   if (!jwk.k || jwk.k.length !== 22) {
-    throw new Error(text.error.boardKey);
+    throw new Error(text().error.boardKey);
   }
 
   return { roomId, roomKey: jwk.k };
@@ -33,7 +33,7 @@ export function parseCollaborationInput(input: string): RoomData {
   const value = String(input || "").trim();
 
   if (!value) {
-    throw new Error(text.error.boardLinkRequired);
+    throw new Error(text().error.boardLinkRequired);
   }
 
   const parsed =
@@ -44,7 +44,7 @@ export function parseCollaborationInput(input: string): RoomData {
     parseRoomPair(value);
 
   if (!parsed) {
-    throw new Error(text.error.invalidBoardLink);
+    throw new Error(text().error.invalidBoardLink);
   }
 
   assertRoomData(parsed);
@@ -179,7 +179,7 @@ export function normalizeBoardName(name: unknown, timestamp = Date.now()): strin
 
 function assertRoomData(data: RoomData): void {
   if (!isValidRoomData(data)) {
-    throw new Error(text.error.invalidBoardData);
+    throw new Error(text().error.invalidBoardData);
   }
 }
 
