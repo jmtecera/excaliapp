@@ -7,7 +7,6 @@ import { BrandMark } from "./BrandMark";
 import { PreferencesMenu } from "./PreferencesMenu";
 import { TurnstileChallenge } from "./TurnstileChallenge";
 import { Button } from "./ui/button";
-import { Dialog } from "./ui/dialog";
 import { Input } from "./ui/input";
 import {
   InputOTP,
@@ -122,13 +121,10 @@ export function LandingPage(props: LandingPageProps) {
     setChallengeOpen(true);
   }
 
-  function handleChallengeOpenChange(open: boolean) {
-    setChallengeOpen(open);
-
-    if (!open) {
-      setChallengeToken("");
-      setChallengeError("");
-    }
+  function closeChallenge() {
+    setChallengeOpen(false);
+    setChallengeToken("");
+    setChallengeError("");
   }
 
   function handleChallengeToken(token: string) {
@@ -147,7 +143,7 @@ export function LandingPage(props: LandingPageProps) {
       return;
     }
 
-    handleChallengeOpenChange(false);
+    closeChallenge();
     void generateRoom(token);
   }
 
@@ -227,6 +223,55 @@ export function LandingPage(props: LandingPageProps) {
                 <Plus class={`size-4 ${generating() ? "animate-pulse" : ""}`} />
                 {generating() ? text().landing.generating : text().landing.generate}
               </Button>
+
+              <Show when={challengeOpen()}>
+                <div
+                  class="grid justify-items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-3 sm:px-4"
+                  role="region"
+                  aria-live="polite"
+                >
+                  <p class="max-w-sm text-center text-xs leading-5 text-muted-foreground">
+                    {text().landing.verificationDescription}
+                  </p>
+                  <Show
+                    when={TURNSTILE_SITE_KEY}
+                    fallback={
+                      <p class="text-center text-sm leading-6 text-muted-foreground" role="alert">
+                        {text().landing.verificationUnavailable}
+                      </p>
+                    }
+                  >
+                    <TurnstileChallenge
+                      siteKey={TURNSTILE_SITE_KEY}
+                      onToken={handleChallengeToken}
+                      onError={() => setChallengeError(text().landing.verificationError)}
+                    />
+                  </Show>
+
+                  <Show when={challengeError()}>
+                    <p class="text-center text-sm leading-6 text-destructive" role="alert">
+                      {challengeError()}
+                    </p>
+                  </Show>
+
+                  <div class="flex items-center justify-center gap-2">
+                    <Button variant="ghost" size="sm" type="button" onClick={closeChallenge}>
+                      {text().landing.verificationCancel}
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="button"
+                      disabled={!challengeToken() || props.busy}
+                      onClick={submitCreate}
+                    >
+                      <Show when={props.busy} fallback={<ShieldCheck class="size-3.5" />}>
+                        <LoaderCircle class="size-3.5 animate-spin" />
+                      </Show>
+                      {text().landing.verificationContinue}
+                    </Button>
+                  </div>
+                </div>
+              </Show>
 
               <div class="my-2 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground sm:my-3">
                 <span class="h-px flex-1 bg-border" />
@@ -324,53 +369,6 @@ export function LandingPage(props: LandingPageProps) {
         <PreferencesMenu placement="top" variant="subtle" />
       </footer>
 
-      <Dialog
-        open={challengeOpen()}
-        onOpenChange={handleChallengeOpenChange}
-        title={text().landing.verificationTitle}
-        description={text().landing.verificationDescription}
-      >
-        <div class="grid gap-5">
-          <div class="rounded-lg border border-border bg-card p-3 sm:p-4">
-            <Show
-              when={TURNSTILE_SITE_KEY}
-              fallback={
-                <p class="py-4 text-center text-sm leading-6 text-muted-foreground" role="alert">
-                  {text().landing.verificationUnavailable}
-                </p>
-              }
-            >
-              <TurnstileChallenge
-                siteKey={TURNSTILE_SITE_KEY}
-                onToken={handleChallengeToken}
-                onError={() => setChallengeError(text().landing.verificationError)}
-              />
-            </Show>
-          </div>
-
-          <Show when={challengeError()}>
-            <p class="-mt-2 text-sm leading-6 text-destructive" role="alert">
-              {challengeError()}
-            </p>
-          </Show>
-
-          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="ghost" type="button" onClick={() => handleChallengeOpenChange(false)}>
-              {text().landing.verificationCancel}
-            </Button>
-            <Button
-              type="button"
-              disabled={!challengeToken() || props.busy}
-              onClick={submitCreate}
-            >
-              <Show when={props.busy} fallback={<ShieldCheck class="size-4" />}>
-                <LoaderCircle class="size-4 animate-spin" />
-              </Show>
-              {text().landing.verificationContinue}
-            </Button>
-          </div>
-        </div>
-      </Dialog>
     </main>
   );
 }
