@@ -17,7 +17,7 @@ import {
   Upload,
   X,
 } from "lucide-solid";
-import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { downloadCsv, exportBoardsCsv, importBoardsCsv } from "../csv";
 import { formatRelativeTime } from "../format";
 import { text } from "../i18n";
@@ -50,6 +50,8 @@ type RoomPageProps = {
   onCopyCode: () => void;
   onCopyInvite: () => void;
   onRenameRoom: (name: string) => void;
+  initialNamePromptOpen: boolean;
+  onInitialNamePromptClose: () => void;
   onUpdateProfile: (details: { name: string; email: string }) => void;
   onUpdatePin: (pin: string | null) => Promise<void>;
   onPomodoroAction: (action: PomodoroAction, durationMinutes?: number) => Promise<void>;
@@ -64,6 +66,8 @@ type RoomPageProps = {
 
 export function RoomPage(props: RoomPageProps) {
   let fileInput!: HTMLInputElement;
+  let headerRef!: HTMLElement;
+  let contentRef!: HTMLDivElement;
   let lastRoomName = props.workspace.roomName;
   let lastPomodoroDuration = props.workspace.pomodoroDurationSeconds;
   const [boardName, setBoardName] = createSignal("");
@@ -92,6 +96,56 @@ export function RoomPage(props: RoomPageProps) {
   const totalWorkedSeconds = createMemo(() =>
     getPomodoroTotalSeconds(props.workspace, props.now),
   );
+
+  onMount(() => {
+    let disposed = false;
+    let revertMedia: (() => void) | undefined;
+
+    void import("gsap").then(({ gsap }) => {
+      if (disposed) return;
+
+      const media = gsap.matchMedia();
+      media.add("(prefers-reduced-motion: no-preference)", () => {
+        const blocks = [...contentRef.querySelectorAll<HTMLElement>("[data-room-entry]")];
+        const animatedTargets = [headerRef, ...blocks];
+        const timeline = gsap.timeline({
+          defaults: { ease: "power4.out" },
+          onComplete: () => gsap.set(animatedTargets, { clearProps: "all" }),
+        });
+
+        gsap.set(animatedTargets, { willChange: "transform, opacity, filter" });
+
+        timeline.from(headerRef, {
+          autoAlpha: 0,
+          y: -10,
+          duration: 0.42,
+        });
+
+        timeline.from(
+          blocks,
+          {
+            autoAlpha: 0,
+            y: 22,
+            filter: "blur(4px)",
+            duration: 0.62,
+            stagger: { each: 0.08, from: "start" },
+          },
+          "-=0.24",
+        );
+
+        return () => {
+          timeline.kill();
+          gsap.set(animatedTargets, { clearProps: "all" });
+        };
+      });
+      revertMedia = () => media.revert();
+    });
+
+    onCleanup(() => {
+      disposed = true;
+      revertMedia?.();
+    });
+  });
 
   createEffect(() => {
     const nextRoomName = props.workspace.roomName;
@@ -160,6 +214,20 @@ export function RoomPage(props: RoomPageProps) {
     }
   }
 
+  function saveInitialRoomName() {
+    const value = roomName().trim();
+
+    if (!value) {
+      return;
+    }
+
+    if (value !== props.workspace.roomName) {
+      props.onRenameRoom(value);
+    }
+
+    props.onInitialNamePromptClose();
+  }
+
   async function savePin() {
     if (!/^[0-9]{4}$/.test(pin())) {
       return;
@@ -186,7 +254,7 @@ export function RoomPage(props: RoomPageProps) {
 
   return (
     <main class="min-h-dvh bg-background">
-      <header class="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
+      <header ref={headerRef} class="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
         <div class="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Button variant="ghost" size="icon" type="button" title={text().room.leave} onClick={props.onLeave}>
             <ArrowLeft class="size-4" />
@@ -253,9 +321,9 @@ export function RoomPage(props: RoomPageProps) {
         </div>
       </header>
 
-      <div class="room-page-content mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <div ref={contentRef} class="room-page-content mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <section class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div>
+          <div data-room-entry>
             <div class="mb-5 flex items-end justify-between gap-4">
               <div>
                 <p class="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{text().room.newBoard}</p>
@@ -322,7 +390,7 @@ export function RoomPage(props: RoomPageProps) {
             </div>
           </div>
 
-          <aside class="rounded-xl border border-border bg-card p-5">
+          <aside data-room-entry class="rounded-xl border border-border bg-card p-5">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="text-sm font-semibold">{text().room.details}</p>
@@ -389,6 +457,46 @@ export function RoomPage(props: RoomPageProps) {
             </button>
           </aside>
         </section>
+
+        <Dialog
+          open={props.initialNamePromptOpen}
+          onOpenChange={(open) => {
+            if (!open) props.onInitialNamePromptClose();
+          }}
+          title={text().room.nameYourRoom}
+          description={text().room.nameYourRoomDescription}
+        >
+          <div class="grid gap-4">
+            <Input
+              value={roomName()}
+              maxlength={80}
+              autofocus
+              aria-label={text().room.roomName}
+              onFocus={(event) => event.currentTarget.select()}
+              onInput={(event) => setRoomName(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") saveInitialRoomName();
+              }}
+            />
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={props.onInitialNamePromptClose}
+              >
+                {text().room.skipName}
+              </Button>
+              <Button
+                type="button"
+                disabled={!roomName().trim() || props.busy}
+                onClick={saveInitialRoomName}
+              >
+                <Check class="size-4" />
+                {text().room.saveName}
+              </Button>
+            </div>
+          </div>
+        </Dialog>
 
         <Dialog
           open={settingsOpen()}
@@ -522,7 +630,7 @@ export function RoomPage(props: RoomPageProps) {
           </div>
         </Dialog>
 
-        <section class="mt-8">
+        <section data-room-entry class="mt-8">
           <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
               <button

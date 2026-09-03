@@ -14,7 +14,6 @@ export function setThemePreference(nextTheme: ThemePreference): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
   } catch {
-    // Preferences are best-effort when storage is unavailable.
   }
 }
 

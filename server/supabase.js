@@ -1,10 +1,31 @@
 import { createHmac } from "node:crypto";
+import { isIP } from "node:net";
 
 const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
 const SUPABASE_SERVER_KEY =
   process.env.SUPABASE_SECRET_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   "";
+const TURNSTILE_ENABLED = readBooleanEnvironment("TURNSTILE_ENABLED", false);
+const TURNSTILE_SECRET = String(process.env.TURNSTILE_SECRET || "").trim();
+const TURNSTILE_HOSTNAMES = String(process.env.TURNSTILE_HOSTNAMES || "")
+  .split(",")
+  .map((hostname) => hostname.trim().toLowerCase())
+  .filter(Boolean);
+const TURNSTILE_TIMEOUT_MS = readPositiveIntegerEnvironment("TURNSTILE_TIMEOUT_MS", 5000, 1000, 30000);
+const ROOM_CREATE_RATE_LIMIT_MAX = readPositiveIntegerEnvironment(
+  "ROOM_CREATE_RATE_LIMIT_MAX",
+  5,
+  1,
+  100,
+);
+const ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS = readPositiveIntegerEnvironment(
+  "ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS",
+  3600,
+  60,
+  86400,
+);
+const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const MAX_REQUEST_BYTES = 512 * 1024;
 const MAX_BOARDS_PER_SYNC = 250;
 const ROOM_CODE_PATTERN = /^[A-Z0-9]{3}-[A-Z0-9]{3}$/;
@@ -21,8 +42,13 @@ export function isSupabaseConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_SERVER_KEY);
 }
 
-export async function createRoom(payload) {
-  return callRpc("create_excalidraw_room", validateCreatePayload(payload));
+export async function createRoom(payload, request) {
+  const { turnstileToken, ...roomPayload } = validateCreatePayload(payload);
+
+  await enforceRoomCreationRateLimit(request);
+  await verifyTurnstile(turnstileToken, request);
+
+  return callRpc("create_excalidraw_room", roomPayload);
 }
 
 export async function syncRoom(roomCode, payload) {
@@ -163,7 +189,26 @@ function validateCreatePayload(payload) {
     avatarHash: validateAvatarHash(body.avatarHash),
     clientId: validateClientId(body.clientId),
     device: validateDevice(body.device),
+    turnstileToken: validateTurnstileToken(body.turnstileToken),
   };
+}
+
+function validateTurnstileToken(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  if (typeof value !== "string") {
+    throw createHttpError(400, "Human verification token is invalid.");
+  }
+
+  const token = value.trim();
+
+  if (token.length > 2048) {
+    throw createHttpError(400, "Human verification token is invalid.");
+  }
+
+  return token;
 }
 
 function validateSyncPayload(payload) {
@@ -440,6 +485,10 @@ function sanitizeRpcResponse(name, data) {
     return data;
   }
 
+  if (name === "consume_excalidraw_room_creation_rate_limit") {
+    return pickDefined(data, ["allowed", "retryAfterSeconds"]);
+  }
+
   if (name === "authorize_excalidraw_room") {
     return pickDefined(data, [
       "accessToken",
@@ -534,18 +583,97 @@ function mapSupabaseError(status, data) {
   return createHttpError(status >= 400 && status < 500 ? 400 : 502, "Invalid request data.");
 }
 
+async function enforceRoomCreationRateLimit(request) {
+  const result = await callRpc("consume_excalidraw_room_creation_rate_limit", {
+    bucketKey: createRequestFingerprint(request),
+    limit: ROOM_CREATE_RATE_LIMIT_MAX,
+    windowSeconds: ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS,
+  });
+
+  if (result?.allowed === true) {
+    return;
+  }
+
+  const error = createHttpError(429, "Too many room creation attempts. Try again later.");
+  error.retryAfterSeconds =
+    toPositiveInteger(result?.retryAfterSeconds) || ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS;
+  throw error;
+}
+
+async function verifyTurnstile(token, request) {
+  if (!TURNSTILE_ENABLED) {
+    return;
+  }
+
+  if (!TURNSTILE_SECRET || !token) {
+    throw createHttpError(403, "Human verification failed. Try again.");
+  }
+
+  const remoteIp = getRequestAddress(request);
+  const payload = {
+    secret: TURNSTILE_SECRET,
+    response: token,
+  };
+
+  if (remoteIp !== "unknown") {
+    payload.remoteip = remoteIp;
+  }
+
+  let validation;
+  let siteverifySucceeded = false;
+
+  try {
+    const response = await fetch(TURNSTILE_SITEVERIFY_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS),
+    });
+    siteverifySucceeded = response.ok;
+    validation = await response.json().catch(() => ({}));
+  } catch {
+    throw createHttpError(503, "Human verification is temporarily unavailable. Try again.");
+  }
+
+  if (!siteverifySucceeded) {
+    throw createHttpError(503, "Human verification is temporarily unavailable. Try again.");
+  }
+
+  const validAction = validation?.action === "create-room";
+  const validHostname =
+    TURNSTILE_HOSTNAMES.length === 0 ||
+    TURNSTILE_HOSTNAMES.includes(String(validation?.hostname || "").trim().toLowerCase());
+
+  if (validation?.success !== true || !validAction || !validHostname) {
+    throw createHttpError(403, "Human verification failed. Try again.");
+  }
+}
+
 function createRequestFingerprint(request) {
-  const forwardedFor = String(
-    request?.headers?.["x-vercel-forwarded-for"] ||
-      request?.headers?.["x-forwarded-for"] ||
-      request?.headers?.["x-real-ip"] ||
-      "",
-  )
-    .split(",", 1)[0]
-    .trim();
-  const address = forwardedFor || request?.socket?.remoteAddress || "unknown";
+  const address = getRequestAddress(request);
   const secret = SUPABASE_SERVER_KEY || "excaliapp-development-rate-limit";
   return createHmac("sha256", secret).update(address).digest("hex");
+}
+
+function getRequestAddress(request) {
+  const headers = request?.headers || {};
+  const candidates = [
+    headers["cf-connecting-ip"],
+    headers["x-vercel-forwarded-for"],
+    headers["x-real-ip"],
+    headers["x-forwarded-for"],
+    request?.socket?.remoteAddress,
+  ];
+
+  for (const candidate of candidates) {
+    const address = String(candidate || "").split(",", 1)[0].trim();
+
+    if (isIP(address) !== 0) {
+      return address;
+    }
+  }
+
+  return "unknown";
 }
 
 function pickDefined(value, keys) {
@@ -587,6 +715,24 @@ function normalizeStatus(value) {
 function toPositiveInteger(value) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : 0;
+}
+
+function readBooleanEnvironment(name, fallback) {
+  const value = String(process.env[name] || "").trim().toLowerCase();
+
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
+}
+
+function readPositiveIntegerEnvironment(name, fallback, minimum, maximum) {
+  const value = Number.parseInt(String(process.env[name] || ""), 10);
+
+  if (!Number.isInteger(value) || value < minimum) {
+    return fallback;
+  }
+
+  return Math.min(value, maximum);
 }
 
 function buildSupabaseHeaders() {

@@ -29,7 +29,7 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/rooms") {
-      sendJson(response, 201, await createRoom(await readRequestBody(request)));
+      sendJson(response, 201, await createRoom(await readRequestBody(request), request));
       return;
     }
 

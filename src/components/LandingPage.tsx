@@ -1,11 +1,13 @@
-import { ArrowRight, Clock3, LoaderCircle, Plus } from "lucide-solid";
+import { ArrowRight, Clock3, LoaderCircle, Plus, ShieldCheck } from "lucide-solid";
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { text } from "../i18n";
 import type { RecentRoom, Workspace } from "../types";
 import { normalizeRoomCode } from "../workspace";
 import { BrandMark } from "./BrandMark";
 import { PreferencesMenu } from "./PreferencesMenu";
+import { TurnstileChallenge } from "./TurnstileChallenge";
 import { Button } from "./ui/button";
+import { Dialog } from "./ui/dialog";
 import { Input } from "./ui/input";
 import {
   InputOTP,
@@ -15,6 +17,8 @@ import {
   REGEXP_ONLY_DIGITS_AND_CHARS,
 } from "./ui/input-otp";
 
+const VISIBLE_RECENT_ROOMS = 3;
+
 type LandingPageProps = {
   workspace: Workspace;
   recentRooms: RecentRoom[];
@@ -22,9 +26,13 @@ type LandingPageProps = {
   busy: boolean;
   onJoin: (details: { code: string; name: string }) => Promise<void>;
   onRecentJoin: (room: RecentRoom, name: string) => Promise<void>;
-  onCreate: (details: { name: string }) => Promise<string>;
+  onCreate: (details: { name: string; turnstileToken?: string }) => Promise<string>;
   onOpenGenerated: (code: string) => void;
 };
+
+const TURNSTILE_ENABLED = String(import.meta.env.VITE_TURNSTILE_ENABLED || "") === "true";
+const TURNSTILE_SITE_KEY = String(import.meta.env.VITE_TURNSTILE_SITE_KEY || "").trim();
+const USE_TURNSTILE = TURNSTILE_ENABLED || Boolean(TURNSTILE_SITE_KEY);
 
 export function LandingPage(props: LandingPageProps) {
   let heroRef!: HTMLDivElement;
@@ -32,6 +40,9 @@ export function LandingPage(props: LandingPageProps) {
   const [roomCode, setRoomCode] = createSignal(props.initialCode);
   const [name, setName] = createSignal(props.workspace.memberName);
   const [generating, setGenerating] = createSignal(false);
+  const [challengeOpen, setChallengeOpen] = createSignal(false);
+  const [challengeToken, setChallengeToken] = createSignal("");
+  const [challengeError, setChallengeError] = createSignal("");
   const unavailable = () => props.busy || generating();
 
   onMount(() => {
@@ -98,12 +109,54 @@ export function LandingPage(props: LandingPageProps) {
     });
   });
 
-  async function generateRoom() {
+  function handleCreateClick() {
+    if (unavailable()) return;
+
+    if (!name().trim() || !USE_TURNSTILE) {
+      void generateRoom();
+      return;
+    }
+
+    setChallengeToken("");
+    setChallengeError("");
+    setChallengeOpen(true);
+  }
+
+  function handleChallengeOpenChange(open: boolean) {
+    setChallengeOpen(open);
+
+    if (!open) {
+      setChallengeToken("");
+      setChallengeError("");
+    }
+  }
+
+  function handleChallengeToken(token: string) {
+    setChallengeToken(token);
+
+    if (token) {
+      setChallengeError("");
+    }
+  }
+
+  function submitCreate() {
+    const token = challengeToken();
+
+    if (!token) {
+      setChallengeError(text().landing.verificationRequired);
+      return;
+    }
+
+    handleChallengeOpenChange(false);
+    void generateRoom(token);
+  }
+
+  async function generateRoom(turnstileToken = "") {
     setGenerating(true);
     setRoomCode("");
 
     try {
-      const generatedCode = await props.onCreate({ name: name() });
+      const generatedCode = await props.onCreate({ name: name(), turnstileToken });
 
       if (!generatedCode) {
         return;
@@ -169,7 +222,7 @@ export function LandingPage(props: LandingPageProps) {
                 size="lg"
                 type="button"
                 disabled={unavailable()}
-                onClick={() => void generateRoom()}
+                onClick={handleCreateClick}
               >
                 <Plus class={`size-4 ${generating() ? "animate-pulse" : ""}`} />
                 {generating() ? text().landing.generating : text().landing.generate}
@@ -231,7 +284,7 @@ export function LandingPage(props: LandingPageProps) {
                   {text().landing.recent}
                 </div>
                 <div class="grid gap-2">
-                  <For each={props.recentRooms}>
+                  <For each={props.recentRooms.slice(0, VISIBLE_RECENT_ROOMS)}>
                     {(room) => (
                       <button
                         type="button"
@@ -270,6 +323,54 @@ export function LandingPage(props: LandingPageProps) {
         </div>
         <PreferencesMenu placement="top" variant="subtle" />
       </footer>
+
+      <Dialog
+        open={challengeOpen()}
+        onOpenChange={handleChallengeOpenChange}
+        title={text().landing.verificationTitle}
+        description={text().landing.verificationDescription}
+      >
+        <div class="grid gap-5">
+          <div class="rounded-lg border border-border bg-card p-3 sm:p-4">
+            <Show
+              when={TURNSTILE_SITE_KEY}
+              fallback={
+                <p class="py-4 text-center text-sm leading-6 text-muted-foreground" role="alert">
+                  {text().landing.verificationUnavailable}
+                </p>
+              }
+            >
+              <TurnstileChallenge
+                siteKey={TURNSTILE_SITE_KEY}
+                onToken={handleChallengeToken}
+                onError={() => setChallengeError(text().landing.verificationError)}
+              />
+            </Show>
+          </div>
+
+          <Show when={challengeError()}>
+            <p class="-mt-2 text-sm leading-6 text-destructive" role="alert">
+              {challengeError()}
+            </p>
+          </Show>
+
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="ghost" type="button" onClick={() => handleChallengeOpenChange(false)}>
+              {text().landing.verificationCancel}
+            </Button>
+            <Button
+              type="button"
+              disabled={!challengeToken() || props.busy}
+              onClick={submitCreate}
+            >
+              <Show when={props.busy} fallback={<ShieldCheck class="size-4" />}>
+                <LoaderCircle class="size-4 animate-spin" />
+              </Show>
+              {text().landing.verificationContinue}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </main>
   );
 }

@@ -1,6 +1,6 @@
 import { X } from "lucide-solid";
 import { Portal } from "solid-js/web";
-import { Show, createEffect, onCleanup, type JSX } from "solid-js";
+import { Show, createEffect, createUniqueId, onCleanup, type JSX } from "solid-js";
 import { Button } from "./button";
 
 export function Dialog(props: {
@@ -10,6 +10,9 @@ export function Dialog(props: {
   description?: string;
   children: JSX.Element;
 }) {
+  const titleId = createUniqueId();
+  const descriptionId = createUniqueId();
+
   createEffect(() => {
     if (!props.open) return;
 
@@ -41,15 +44,15 @@ export function Dialog(props: {
             class="modal-panel relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-2xl shadow-black/50"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="room-settings-title"
-            aria-describedby={props.description ? "room-settings-description" : undefined}
+            aria-labelledby={titleId}
+            aria-describedby={props.description ? descriptionId : undefined}
           >
             <div class="pr-10">
-              <h2 id="room-settings-title" class="text-lg font-semibold tracking-tight">
+              <h2 id={titleId} class="text-lg font-semibold tracking-tight">
                 {props.title}
               </h2>
               <Show when={props.description}>
-                <p id="room-settings-description" class="mt-1 text-sm text-muted-foreground">
+                <p id={descriptionId} class="mt-1 text-sm text-muted-foreground">
                   {props.description}
                 </p>
               </Show>

@@ -11,7 +11,10 @@ export async function createSharedRoom({
   memberEmail,
   clientId,
   device,
-}: Pick<Workspace, "roomName" | "memberName" | "memberEmail" | "clientId" | "device">): Promise<Workspace> {
+  turnstileToken = "",
+}: Pick<Workspace, "roomName" | "memberName" | "memberEmail" | "clientId" | "device"> & {
+  turnstileToken?: string;
+}): Promise<Workspace> {
   const payload = await request<SyncPayload>("/api/rooms", {
     method: "POST",
     body: JSON.stringify({
@@ -20,6 +23,7 @@ export async function createSharedRoom({
       avatarHash: createAvatarHash(memberEmail),
       clientId,
       device,
+      turnstileToken,
     }),
   });
 

@@ -14,7 +14,6 @@ export function setLocale(nextLocale: Locale): void {
   try {
     localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
   } catch {
-    // Preferences are best-effort when storage is unavailable.
   }
 }
 
@@ -38,6 +37,13 @@ const en = {
     or: "or",
     generate: "Generate a new room",
     generating: "Generating room",
+    verificationTitle: "Verify before creating a room",
+    verificationDescription: "Complete this quick security check to keep room creation available for everyone.",
+    verificationRequired: "Complete the security check to continue.",
+    verificationError: "We couldn't load the security check. Try again.",
+    verificationUnavailable: "Security verification is unavailable right now. Try again later.",
+    verificationCancel: "Cancel",
+    verificationContinue: "Create room",
     recent: "Recent rooms",
     footer: "Proudly Made in Argentina",
     contact: "Tecera Software",
@@ -69,6 +75,9 @@ const en = {
     openSettings: "Open",
     roomName: "Room name",
     roomNameDescription: "Visible to everyone sharing this room.",
+    nameYourRoom: "Name your room",
+    nameYourRoomDescription: "Give it a name so everyone can recognize it.",
+    skipName: "Maybe later",
     pinProtection: "PIN protection",
     pinDescription: "Require a 4-digit PIN when someone joins on a new device.",
     pinEnabled: "PIN enabled",
@@ -232,6 +241,13 @@ const es: Messages = {
     or: "o",
     generate: "Generar una sala nueva",
     generating: "Generando sala",
+    verificationTitle: "Verificá antes de crear la sala",
+    verificationDescription: "Completá esta verificación rápida para mantener disponible la creación de salas.",
+    verificationRequired: "Completá la verificación para continuar.",
+    verificationError: "No se pudo cargar la verificación. Intentá de nuevo.",
+    verificationUnavailable: "La verificación no está disponible ahora. Intentá más tarde.",
+    verificationCancel: "Cancelar",
+    verificationContinue: "Crear sala",
     recent: "Salas recientes",
     footer: "Hecho con orgullo en Argentina",
     contact: "Tecera Software",
@@ -263,6 +279,9 @@ const es: Messages = {
     openSettings: "Abrir",
     roomName: "Nombre de la sala",
     roomNameDescription: "Lo ve todo el mundo que comparte esta sala.",
+    nameYourRoom: "Dale un nombre a tu sala",
+    nameYourRoomDescription: "Así todos pueden reconocerla fácilmente.",
+    skipName: "Ahora no",
     pinProtection: "Protección con PIN",
     pinDescription: "Pedí un PIN de 4 dígitos cuando alguien entra desde un dispositivo nuevo.",
     pinEnabled: "PIN activado",
@@ -407,7 +426,6 @@ function readLocale(): Locale {
       return stored;
     }
   } catch {
-    // Browser language detection still works when storage is unavailable.
   }
 
   return detectBrowserLocale();

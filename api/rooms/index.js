@@ -12,7 +12,7 @@ export default async function handler(request, response) {
   }
 
   try {
-    sendJson(response, 201, await createRoom(await readRequestBody(request)));
+    sendJson(response, 201, await createRoom(await readRequestBody(request), request));
   } catch (error) {
     const result = getErrorResponse(error);
     sendJson(response, result.status, result.body);

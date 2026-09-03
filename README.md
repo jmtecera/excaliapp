@@ -30,7 +30,7 @@ Excaliapp Rooms is a web app for organizing shared Excalidraw boards. A room has
    cp .env.example .env
    ```
 
-3. Configure the Supabase URL, server secret, migration database URL, and public Realtime key in `.env`.
+3. Configure the Supabase URL, server secret, migration database URL, and public Realtime key in `.env`. Turnstile can remain disabled locally.
 
 4. Apply the database migrations:
 
@@ -73,6 +73,14 @@ Browser-safe values:
 - `VITE_PUBLIC_SUPABASE_URL`
 - `VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_API_BASE_URL`, normally left empty for same-origin API requests
+- `VITE_TURNSTILE_ENABLED` and `VITE_TURNSTILE_SITE_KEY`
+
+Room creation protection:
+
+- `ROOM_CREATE_RATE_LIMIT_MAX` and `ROOM_CREATE_RATE_LIMIT_WINDOW_SECONDS` configure the durable per-IP creation limit. The defaults allow 5 attempts per hour.
+- `TURNSTILE_ENABLED`, `TURNSTILE_SECRET`, `TURNSTILE_HOSTNAMES`, and `TURNSTILE_TIMEOUT_MS` configure the server-side Cloudflare Turnstile check.
+- Create a Managed Turnstile widget for the production hostname, then set its public site key as `VITE_TURNSTILE_SITE_KEY` and its secret key as `TURNSTILE_SECRET`. Set both `TURNSTILE_ENABLED=true` and `VITE_TURNSTILE_ENABLED=true` in the deployment environment.
+- Apply the new migration before enabling the protection: `pnpm db:push`.
 
 Never prefix database URLs or server secrets with `VITE_`.
 

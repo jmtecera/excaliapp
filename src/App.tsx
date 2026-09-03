@@ -83,6 +83,7 @@ export function App() {
   const [now, setNow] = createSignal(Date.now());
   const [syncBusy, setSyncBusy] = createSignal(false);
   const [toast, setToast] = createSignal("");
+  const [initialNamePromptOpen, setInitialNamePromptOpen] = createSignal(false);
   let toastTimeout = 0;
   let realtimeSyncTimeout = 0;
   let syncQueued = false;
@@ -235,7 +236,7 @@ export function App() {
     });
   });
 
-  async function handleCreateRoom(details: { name: string }): Promise<string> {
+  async function handleCreateRoom(details: { name: string; turnstileToken?: string }): Promise<string> {
     setSyncBusy(true);
 
     try {
@@ -246,9 +247,11 @@ export function App() {
         memberEmail: workspace().memberEmail,
         clientId: workspace().clientId,
         device: detectDevice(),
+        turnstileToken: details.turnstileToken,
       });
       updateBoards([]);
       updateWorkspace(createdWorkspace);
+      setInitialNamePromptOpen(true);
       refreshRecentRooms();
       showToast(text().toast.roomCreated);
       return createdWorkspace.roomCode;
@@ -378,6 +381,7 @@ export function App() {
   }
 
   function handleLeaveRoom() {
+    setInitialNamePromptOpen(false);
     setPendingJoin(null);
     setRealtimeMembers([]);
     updateBoards([]);
@@ -666,6 +670,8 @@ export function App() {
             showToast(text().toast.inviteCopied);
           }}
           onRenameRoom={handleRenameRoom}
+          initialNamePromptOpen={initialNamePromptOpen()}
+          onInitialNamePromptClose={() => setInitialNamePromptOpen(false)}
           onUpdateProfile={handleUpdateProfile}
           onUpdatePin={handleUpdatePin}
           onPomodoroAction={handlePomodoroAction}
