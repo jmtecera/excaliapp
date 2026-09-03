@@ -121,6 +121,51 @@ summary:focus-visible {
   color: var(--background);
 }
 
+.room-page-content {
+  animation: content-arrive 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.landing-title {
+  perspective: 800px;
+}
+
+.hero-word {
+  display: inline-block;
+  transform-origin: 50% 100%;
+}
+
+.preferences-panel {
+  transform-origin: top right;
+}
+
+details[open] > .preferences-panel {
+  animation: preferences-panel-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes content-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes preferences-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .modal-backdrop {
   animation: modal-backdrop-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

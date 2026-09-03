@@ -4,13 +4,17 @@ import { locale, setLocale, text } from "../i18n";
 import { setThemePreference, themePreference, type ThemePreference } from "../preferences";
 import { cn } from "../lib/utils";
 
+type PreferencesMenuProps = {
+  inline?: boolean;
+};
+
 const themeIcons = {
   dark: Moon,
   light: Sun,
   system: Monitor,
 } as const;
 
-export function PreferencesMenu() {
+export function PreferencesMenu(props: PreferencesMenuProps = {}) {
   const themeOptions: Array<{ value: ThemePreference; label: () => string }> = [
     { value: "system", label: () => text().preferences.system },
     { value: "light", label: () => text().preferences.light },
@@ -18,9 +22,17 @@ export function PreferencesMenu() {
   ];
 
   return (
-    <details class="relative">
+    <details
+      class={cn(
+        "relative",
+        props.inline && "landing-preferences flex flex-col items-end",
+      )}
+    >
       <summary
-        class="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        class={cn(
+          "inline-flex h-9 w-fit shrink-0 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+          props.inline && "self-end",
+        )}
         aria-label={text().preferences.open}
       >
         <Languages class="size-3.5" />
@@ -28,7 +40,14 @@ export function PreferencesMenu() {
         <ChevronDown class="size-3" />
       </summary>
 
-      <div class="absolute right-0 top-[calc(100%+0.5rem)] z-40 w-56 rounded-xl border border-border bg-card p-2 shadow-xl shadow-black/15">
+      <div
+        class={cn(
+          "preferences-panel w-56 rounded-xl border border-border bg-card p-2 shadow-xl shadow-black/15",
+          props.inline
+            ? "mt-2"
+            : "absolute right-0 top-[calc(100%+0.5rem)] z-40",
+        )}
+      >
         <div class="border-b border-border px-2 pb-2 pt-1">
           <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {text().preferences.language}

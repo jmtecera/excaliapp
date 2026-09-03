@@ -1,5 +1,5 @@
 import { ArrowRight, Clock3, LoaderCircle, Plus } from "lucide-solid";
-import { For, Show, createSignal } from "solid-js";
+import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { text } from "../i18n";
 import type { RecentRoom, Workspace } from "../types";
 import { normalizeRoomCode } from "../workspace";
@@ -27,10 +27,76 @@ type LandingPageProps = {
 };
 
 export function LandingPage(props: LandingPageProps) {
+  let heroRef!: HTMLDivElement;
+  let cardRef!: HTMLDivElement;
   const [roomCode, setRoomCode] = createSignal(props.initialCode);
   const [name, setName] = createSignal(props.workspace.memberName);
   const [generating, setGenerating] = createSignal(false);
   const unavailable = () => props.busy || generating();
+
+  onMount(() => {
+    let disposed = false;
+    let revertMedia: (() => void) | undefined;
+
+    void import("gsap").then(({ gsap }) => {
+      if (disposed) return;
+
+      const media = gsap.matchMedia();
+      media.add(
+        "(prefers-reduced-motion: no-preference)",
+        () => {
+          const words = [...heroRef.querySelectorAll<HTMLElement>("[data-hero-word]")];
+          const description = heroRef.querySelector<HTMLElement>("[data-hero-description]");
+          const animatedTargets = [
+            ...words,
+            ...(description ? [description] : []),
+            cardRef,
+          ];
+          const timeline = gsap.timeline({
+            defaults: { ease: "power4.out" },
+            onComplete: () => gsap.set(animatedTargets, { clearProps: "all" }),
+          });
+
+          gsap.set(animatedTargets, { willChange: "transform, opacity, filter" });
+
+          timeline.from(words, {
+            autoAlpha: 0,
+            y: 38,
+            rotationX: -18,
+            filter: "blur(6px)",
+            duration: 0.72,
+            stagger: { each: 0.055, from: "start" },
+          });
+
+          if (description) {
+            timeline.from(
+              description,
+              { autoAlpha: 0, y: 16, filter: "blur(4px)", duration: 0.5 },
+              "-=0.42",
+            );
+          }
+
+          timeline.from(
+            cardRef,
+            { autoAlpha: 0, y: 32, scale: 0.965, duration: 0.78 },
+            "-=0.28",
+          );
+
+          return () => {
+            timeline.kill();
+            gsap.set(animatedTargets, { clearProps: "all" });
+          };
+        },
+        heroRef,
+      );
+      revertMedia = () => media.revert();
+    });
+
+    onCleanup(() => {
+      disposed = true;
+      revertMedia?.();
+    });
+  });
 
   async function generateRoom() {
     setGenerating(true);
@@ -56,30 +122,35 @@ export function LandingPage(props: LandingPageProps) {
   }
 
   return (
-    <main class="landing-page relative flex h-dvh flex-col overflow-hidden bg-background">
-      <header class="landing-header relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between px-5 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <div class="flex items-center gap-3">
-          <BrandMark />
-          <span class="text-sm font-semibold tracking-tight">{text().appName}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="hidden text-xs text-muted-foreground sm:block">{text().landing.tagline}</span>
-          <PreferencesMenu />
+    <main class="landing-page relative flex min-h-dvh flex-col overflow-x-hidden bg-background">
+      <header class="landing-header relative z-10 mx-auto w-full max-w-6xl shrink-0 px-5 py-4 sm:px-6 lg:px-8 lg:py-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <BrandMark />
+            <span class="text-sm font-semibold tracking-tight">{text().appName}</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="hidden pt-2 text-xs text-muted-foreground sm:block">{text().landing.tagline}</span>
+            <PreferencesMenu inline />
+          </div>
         </div>
       </header>
 
       <section class="landing-content relative z-10 mx-auto grid min-h-0 w-full max-w-6xl flex-1 items-center gap-7 px-5 py-3 sm:px-6 sm:py-5 lg:grid-cols-[1fr_460px] lg:gap-16 lg:px-8 lg:py-8">
-        <div class="max-w-2xl">
-          <h1 class="landing-title max-w-xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-7xl">
-            {text().landing.heroLead}
-            <span class="block text-muted-foreground">{text().landing.heroAccent}</span>
-          </h1>
-          <p class="landing-description mt-4 max-w-lg text-pretty text-sm leading-6 text-muted-foreground sm:mt-5 sm:text-base sm:leading-7 lg:mt-7 lg:text-lg">
+        <div ref={heroRef} class="landing-hero max-w-2xl">
+            <h1
+              class="landing-title max-w-xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-7xl"
+              aria-label={`${text().landing.heroLead} ${text().landing.heroAccent}`}
+            >
+              <AnimatedWordLine value={text().landing.heroLead} />
+              <AnimatedWordLine value={text().landing.heroAccent} muted />
+            </h1>
+          <p data-hero-description class="landing-description mt-4 max-w-lg text-pretty text-sm leading-6 text-muted-foreground sm:mt-5 sm:text-base sm:leading-7 lg:mt-7 lg:text-lg">
             {text().landing.description}
           </p>
         </div>
 
-        <div class="landing-card rounded-xl border border-border bg-card p-2 shadow-2xl shadow-black/60">
+        <div ref={cardRef} class="landing-card rounded-xl border border-border bg-card p-2 shadow-2xl shadow-black/60">
           <div class="rounded-lg border border-border bg-background p-4 sm:p-6 lg:p-7">
             <div class="mb-4 sm:mb-6">
               <h2 class="text-lg font-semibold tracking-tight">{text().landing.enterTitle}</h2>
@@ -192,7 +263,7 @@ export function LandingPage(props: LandingPageProps) {
         <span aria-hidden="true">–</span>
         <a
           class="font-medium text-foreground underline-offset-4 hover:underline"
-          href="https://tecera.ar"
+          href="https://tecera.com.ar"
           target="_blank"
           rel="noreferrer"
         >
@@ -200,6 +271,22 @@ export function LandingPage(props: LandingPageProps) {
         </a>
       </footer>
     </main>
+  );
+}
+
+function AnimatedWordLine(props: { value: string; muted?: boolean }) {
+  const words = () => props.value.trim().split(/\s+/).filter(Boolean);
+
+  return (
+    <span class={`block ${props.muted ? "text-muted-foreground" : ""}`} aria-hidden="true">
+      <For each={words()}>
+        {(word, index) => (
+          <span class="hero-word" data-hero-word>
+            {word}{index() < words().length - 1 ? "\u00a0" : ""}
+          </span>
+        )}
+      </For>
+    </span>
   );
 }
 

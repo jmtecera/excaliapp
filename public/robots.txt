@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Room pages send X-Robots-Tag: noindex, nofollow because they are collaborative spaces.

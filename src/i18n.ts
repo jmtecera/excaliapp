@@ -23,6 +23,9 @@ const en = {
   defaultRoomName: "Untitled room",
   landing: {
     tagline: "Shared boards with a simple room code",
+    seoTitle: "Shared Excalidraw rooms | Excaliapp Rooms",
+    seoDescription:
+      "Create and share Excalidraw rooms with a short code. Collaborate on boards with shared presence and a synchronized Pomodoro timer.",
     heroLead: "A room for every",
     heroAccent: "great idea.",
     description:
@@ -37,7 +40,7 @@ const en = {
     generating: "Generating room",
     recent: "Recent rooms",
     footer: "Proudly Made in Argentina",
-    contact: "Contact",
+    contact: "Made by Tecera Software",
   },
   room: {
     leave: "Leave room",
@@ -214,6 +217,9 @@ const es: Messages = {
   defaultRoomName: "Sala sin nombre",
   landing: {
     tagline: "Pizarras compartidas con un código simple",
+    seoTitle: "Salas compartidas de Excalidraw | Excaliapp Rooms",
+    seoDescription:
+      "Creá y compartí salas de Excalidraw con un código corto. Pizarras colaborativas y un temporizador Pomodoro sincronizado, sin configuración.",
     heroLead: "Una sala para cada",
     heroAccent: "gran idea.",
     description:
@@ -228,7 +234,7 @@ const es: Messages = {
     generating: "Generando sala",
     recent: "Salas recientes",
     footer: "Hecho con orgullo en Argentina",
-    contact: "Contacto",
+    contact: "Hecho por Tecera Software",
   },
   room: {
     leave: "Salir de la sala",
@@ -397,8 +403,30 @@ export const text = createMemo(() => dictionaries[locale()]);
 function readLocale(): Locale {
   try {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-    return stored === "en" || stored === "es" ? stored : "es";
+    if (stored === "en" || stored === "es") {
+      return stored;
+    }
   } catch {
+    // Browser language detection still works when storage is unavailable.
+  }
+
+  return detectBrowserLocale();
+}
+
+function detectBrowserLocale(): Locale {
+  if (typeof navigator === "undefined") {
     return "es";
   }
+
+  const candidates = [...(navigator.languages || []), navigator.language];
+
+  for (const candidate of candidates) {
+    const language = candidate?.toLowerCase().split("-")[0];
+
+    if (language === "es" || language === "en") {
+      return language;
+    }
+  }
+
+  return "es";
 }

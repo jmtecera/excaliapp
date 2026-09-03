@@ -253,7 +253,7 @@ export function RoomPage(props: RoomPageProps) {
         </div>
       </header>
 
-      <div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <div class="room-page-content mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <section class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div>
             <div class="mb-5 flex items-end justify-between gap-4">

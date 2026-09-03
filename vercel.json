@@ -1,6 +1,15 @@
 {
   "headers": [
     {
+      "source": "/room/:code",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {

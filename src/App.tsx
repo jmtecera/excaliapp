@@ -157,8 +157,24 @@ export function App() {
 
   createEffect(() => {
     const currentWorkspace = workspace();
+    const isRoomRoute = Boolean(routeCode());
+    const pageTitle = inRoom()
+      ? `${currentWorkspace.roomName} · ${text().appName}`
+      : text().landing.seoTitle;
+    const pageDescription = text().landing.seoDescription;
+    const canonicalUrl = new URL("/", window.location.origin).href;
+
     document.documentElement.lang = locale();
-    document.title = inRoom() ? `${currentWorkspace.roomName} · ${text().appName}` : text().appName;
+    document.title = pageTitle;
+    updateMeta("name", "description", pageDescription);
+    updateMeta("name", "robots", isRoomRoute ? "noindex, nofollow" : "index, follow");
+    updateMeta("property", "og:title", pageTitle);
+    updateMeta("property", "og:description", pageDescription);
+    updateMeta("property", "og:url", canonicalUrl);
+    updateMeta("property", "og:locale", locale() === "es" ? "es_AR" : "en_US");
+    updateMeta("name", "twitter:title", pageTitle);
+    updateMeta("name", "twitter:description", pageDescription);
+    setCanonicalUrl(canonicalUrl);
   });
 
   onMount(() => {
@@ -592,7 +608,6 @@ export function App() {
   function updateWorkspace(nextWorkspace: Workspace) {
     const saved = saveWorkspace(normalizeWorkspace(nextWorkspace));
     setWorkspace(saved);
-    document.title = hasWorkspace(saved) ? `${saved.roomName} · ${text().appName}` : text().appName;
   }
 
   function updateBoards(nextBoards: RoomRecord[]) {
@@ -737,4 +752,24 @@ function requireMemberName(name: unknown): string {
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function updateMeta(
+  attribute: "name" | "property",
+  value: string,
+  content: string,
+): void {
+  document.querySelector<HTMLMetaElement>(`meta[${attribute}="${value}"]`)?.setAttribute("content", content);
+}
+
+function setCanonicalUrl(url: string): void {
+  let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.rel = "canonical";
+    document.head.append(canonical);
+  }
+
+  canonical.href = url;
 }
