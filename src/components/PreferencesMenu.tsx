@@ -5,7 +5,8 @@ import { setThemePreference, themePreference, type ThemePreference } from "../pr
 import { cn } from "../lib/utils";
 
 type PreferencesMenuProps = {
-  inline?: boolean;
+  placement?: "bottom" | "top";
+  variant?: "default" | "subtle";
 };
 
 const themeIcons = {
@@ -15,6 +16,10 @@ const themeIcons = {
 } as const;
 
 export function PreferencesMenu(props: PreferencesMenuProps = {}) {
+  const isSubtle = () => props.variant === "subtle";
+  const panelPlacement = () => props.placement === "top"
+    ? "bottom-[calc(100%+0.5rem)]"
+    : "top-[calc(100%+0.5rem)]";
   const themeOptions: Array<{ value: ThemePreference; label: () => string }> = [
     { value: "system", label: () => text().preferences.system },
     { value: "light", label: () => text().preferences.light },
@@ -23,15 +28,13 @@ export function PreferencesMenu(props: PreferencesMenuProps = {}) {
 
   return (
     <details
-      class={cn(
-        "relative",
-        props.inline && "landing-preferences flex flex-col items-end",
-      )}
+      class="relative"
     >
       <summary
         class={cn(
-          "inline-flex h-9 w-fit shrink-0 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-          props.inline && "self-end",
+          isSubtle()
+            ? "inline-flex h-auto w-fit shrink-0 cursor-pointer list-none items-center gap-1.5 px-0 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            : "inline-flex h-9 w-fit shrink-0 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
         )}
         aria-label={text().preferences.open}
       >
@@ -40,14 +43,10 @@ export function PreferencesMenu(props: PreferencesMenuProps = {}) {
         <ChevronDown class="size-3" />
       </summary>
 
-      <div
-        class={cn(
-          "preferences-panel w-56 rounded-xl border border-border bg-card p-2 shadow-xl shadow-black/15",
-          props.inline
-            ? "mt-2"
-            : "absolute right-0 top-[calc(100%+0.5rem)] z-40",
-        )}
-      >
+      <div class={cn(
+        "preferences-panel absolute right-0 z-40 w-56 rounded-xl border border-border bg-card p-2 shadow-xl shadow-black/15",
+        panelPlacement(),
+      )}>
         <div class="border-b border-border px-2 pb-2 pt-1">
           <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {text().preferences.language}

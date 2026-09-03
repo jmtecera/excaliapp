@@ -286,7 +286,7 @@ export function RoomPage(props: RoomPageProps) {
               </Button>
             </form>
 
-            <details class="group mt-3">
+            <details class="group mt-5">
               <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
                 <Link2 class="size-3.5" />
                 {text().room.addExisting}
@@ -323,14 +323,18 @@ export function RoomPage(props: RoomPageProps) {
           </div>
 
           <aside class="rounded-xl border border-border bg-card p-5">
-            <div class="flex items-start justify-between">
-              <div>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
                 <p class="text-sm font-semibold">{text().room.details}</p>
                 <p class="mt-1 text-xs text-muted-foreground">{text().room.shareHint}</p>
               </div>
-              <Badge class={props.workspace.lastError ? "text-destructive" : ""}>
-                <Show when={props.workspace.lastError} fallback={<Cloud class="mr-1 size-3" />}>
-                  <CloudOff class="mr-1 size-3" />
+              <Badge
+                class={props.workspace.lastError
+                  ? "shrink-0 gap-1.5 whitespace-nowrap text-destructive"
+                  : "shrink-0 gap-1.5 whitespace-nowrap"}
+              >
+                <Show when={props.workspace.lastError} fallback={<Cloud class="size-3" />}>
+                  <CloudOff class="size-3" />
                 </Show>
                 {props.workspace.lastError ? text().room.offline : text().room.synced}
               </Badge>

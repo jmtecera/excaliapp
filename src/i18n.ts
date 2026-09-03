@@ -40,7 +40,7 @@ const en = {
     generating: "Generating room",
     recent: "Recent rooms",
     footer: "Proudly Made in Argentina",
-    contact: "Made by Tecera Software",
+    contact: "Tecera Software",
   },
   room: {
     leave: "Leave room",
@@ -234,7 +234,7 @@ const es: Messages = {
     generating: "Generando sala",
     recent: "Salas recientes",
     footer: "Hecho con orgullo en Argentina",
-    contact: "Hecho por Tecera Software",
+    contact: "Tecera Software",
   },
   room: {
     leave: "Salir de la sala",

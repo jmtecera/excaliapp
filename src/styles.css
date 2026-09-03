@@ -232,8 +232,12 @@ details[open] > .preferences-panel {
 
 @media (max-height: 620px) {
   .landing-description,
-  .landing-footer {
+  .landing-footer-copy {
     display: none;
+  }
+
+  .landing-footer {
+    padding-block: 0.4rem;
   }
 
   .landing-card > div {

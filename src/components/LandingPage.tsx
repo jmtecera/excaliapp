@@ -124,15 +124,12 @@ export function LandingPage(props: LandingPageProps) {
   return (
     <main class="landing-page relative flex min-h-dvh flex-col overflow-x-hidden bg-background">
       <header class="landing-header relative z-10 mx-auto w-full max-w-6xl shrink-0 px-5 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <div class="flex items-start justify-between gap-4">
+        <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <BrandMark />
             <span class="text-sm font-semibold tracking-tight">{text().appName}</span>
           </div>
-          <div class="flex items-start gap-3">
-            <span class="hidden pt-2 text-xs text-muted-foreground sm:block">{text().landing.tagline}</span>
-            <PreferencesMenu inline />
-          </div>
+          <span class="hidden text-xs text-muted-foreground sm:block">{text().landing.tagline}</span>
         </div>
       </header>
 
@@ -258,17 +255,20 @@ export function LandingPage(props: LandingPageProps) {
         </div>
       </section>
 
-      <footer class="landing-footer relative z-10 mx-auto flex w-full max-w-6xl shrink-0 items-center gap-2 px-5 py-3 text-xs text-muted-foreground sm:px-6 lg:px-8 lg:py-5">
-        <span>{text().landing.footer}</span>
-        <span aria-hidden="true">–</span>
-        <a
-          class="font-medium text-foreground underline-offset-4 hover:underline"
-          href="https://tecera.com.ar"
-          target="_blank"
-          rel="noreferrer"
-        >
-          {text().landing.contact}
-        </a>
+      <footer class="landing-footer relative z-10 mx-auto flex w-full max-w-6xl shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-5 py-3 text-xs text-muted-foreground sm:px-6 lg:px-8 lg:py-5">
+        <div class="landing-footer-copy flex min-w-0 items-center gap-2">
+          <span class="truncate">{text().landing.footer}</span>
+          <span aria-hidden="true">–</span>
+          <a
+            class="shrink-0 font-medium text-foreground underline-offset-4 hover:underline"
+            href="https://tecera.com.ar"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {text().landing.contact}
+          </a>
+        </div>
+        <PreferencesMenu placement="top" variant="subtle" />
       </footer>
     </main>
   );
