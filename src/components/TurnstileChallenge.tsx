@@ -23,8 +23,6 @@ declare global {
 }
 
 const TURNSTILE_SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-let scriptPromise: Promise<void> | undefined;
-
 type TurnstileChallengeProps = {
   siteKey: string;
   onToken: (token: string) => void;
@@ -50,7 +48,7 @@ export function TurnstileChallenge(props: TurnstileChallengeProps) {
 
   async function mountWidget() {
     try {
-      await loadTurnstileScript();
+      await waitForTurnstile();
 
       if (disposed || !window.turnstile) {
         return;
@@ -85,28 +83,44 @@ export function TurnstileChallenge(props: TurnstileChallengeProps) {
   return <div ref={container} class="flex min-h-[65px] justify-center" />;
 }
 
-function loadTurnstileScript(): Promise<void> {
+function waitForTurnstile(): Promise<void> {
   if (window.turnstile) {
     return Promise.resolve();
   }
 
-  if (scriptPromise) {
-    return scriptPromise;
+  const script = document.querySelector<HTMLScriptElement>(
+    `script[src="${TURNSTILE_SCRIPT_URL}"]`,
+  );
+
+  if (!script) {
+    return Promise.reject(new Error("Turnstile script is not present."));
   }
 
-  scriptPromise = new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = TURNSTILE_SCRIPT_URL;
-    script.async = true;
-    script.defer = true;
-    script.dataset.excaliappTurnstile = "true";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Turnstile script failed to load."));
-    document.head.append(script);
-  }).catch((error) => {
-    scriptPromise = undefined;
-    throw error;
-  });
+  return new Promise<void>((resolve, reject) => {
+    let interval = 0;
+    let timeout = 0;
+    let cleanup = () => {};
+    const checkReady = () => {
+      if (!window.turnstile) return;
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error("Turnstile script failed to load."));
+    };
 
-  return scriptPromise;
+    cleanup = () => {
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+      script.removeEventListener("error", handleError);
+    };
+    timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Turnstile API did not become available."));
+    }, 10000);
+    script.addEventListener("error", handleError, { once: true });
+    interval = window.setInterval(checkReady, 50);
+    checkReady();
+  });
 }
