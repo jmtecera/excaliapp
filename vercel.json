@@ -1,4 +1,5 @@
 {
+  "buildCommand": "pnpm vercel-build",
   "headers": [
     {
       "source": "/room/:code",
