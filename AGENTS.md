@@ -30,6 +30,7 @@ pnpm check
 - `src/`: SolidJS frontend and shared browser logic
 - `src/components/ui/`: small local UI primitives
 - `api/`: Vercel Function entry points
+- `server/handlers.js`: shared HTTP handlers used by `api/` and the local server
 - `server/supabase.js`: request validation, response sanitization, and Supabase RPC client
 - `server/sync-server.js`: local API server used by Vite
 - `supabase/migrations/`: ordered database schema and RPC migrations
@@ -41,14 +42,14 @@ pnpm check
 - Follow existing SolidJS signal, memo, and effect patterns.
 - Keep UI components controlled through props rather than adding global state.
 - Reuse the local `Button`, `Input`, `Dialog`, and `InputOTP` primitives.
-- Keep the interface dark-only and preserve the existing neutral visual system.
+- Support the dark, light, and system themes and preserve the existing neutral visual system.
 - Use Tailwind utility classes for component styling and `src/styles.css` for global tokens or keyframes.
-- Keep user-facing text in `src/i18n.ts`. The interface is English-only.
+- Keep user-facing text in `src/i18n.ts` and add every string in both English and Spanish.
 - Keep edits narrowly scoped and avoid unrelated formatting changes.
 
 ## Data Flow
 
-The browser calls same-origin `/api/rooms` routes. API handlers pass request bodies to `server/supabase.js`, which validates and normalizes every field before invoking server-only Supabase RPCs.
+The browser calls same-origin `/api/rooms` routes. API handlers in `server/handlers.js` pass request bodies to `server/supabase.js`, which validates and normalizes every field before invoking server-only Supabase RPCs.
 
 Supabase RPCs are `security definer` functions available only to the service role. Database tables use row-level security and are not directly accessible to browser roles. Realtime broadcasts contain change notifications; protected room data is fetched through the API after authorization.
 
@@ -77,4 +78,4 @@ pnpm db:push
 
 ## Testing
 
-`server/supabase.test.js` covers request validation, sensitive-field filtering, and PIN throttling behavior. Add focused tests there when changing API contracts. Frontend changes must pass TypeScript and a production Vite build.
+`server/supabase.test.js` covers request validation, sensitive-field filtering, and PIN throttling behavior. `server/handlers.test.js` covers HTTP routing. Add focused tests when changing API contracts. Frontend changes must pass TypeScript and a production Vite build.

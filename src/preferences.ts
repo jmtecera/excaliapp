@@ -14,6 +14,7 @@ export function setThemePreference(nextTheme: ThemePreference): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
   } catch {
+    // Storage may be unavailable (e.g. private browsing); the theme still applies for this session.
   }
 }
 
@@ -26,10 +27,7 @@ export function applyThemePreference(preference: ThemePreference): void {
   document.documentElement.style.colorScheme = preference === "system" ? "light dark" : preference;
 
   const themeColor = document.querySelector('meta[name="theme-color"]');
-  themeColor?.setAttribute(
-    "content",
-    preference === "light" ? "#fafaf9" : preference === "dark" ? "#000000" : "#000000",
-  );
+  themeColor?.setAttribute("content", preference === "light" ? "#fafaf9" : "#000000");
 }
 
 function readTheme(): ThemePreference {

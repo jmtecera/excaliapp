@@ -14,6 +14,7 @@ export function setLocale(nextLocale: Locale): void {
   try {
     localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
   } catch {
+    // Storage may be unavailable (e.g. private browsing); the locale still applies for this session.
   }
 }
 
@@ -424,6 +425,7 @@ function readLocale(): Locale {
       return stored;
     }
   } catch {
+    // Fall back to the browser language when storage is unavailable.
   }
 
   return detectBrowserLocale();

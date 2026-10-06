@@ -1,7 +1,5 @@
-import { existsSync } from "node:fs";
+import "../server/load-env.js";
 import { spawnSync } from "node:child_process";
-
-loadLocalEnvironment();
 
 const databaseUrl =
   process.env.POSTGRES_URL_NON_POOLING ||
@@ -36,11 +34,3 @@ const result = spawnSync(
 );
 
 process.exit(result.status ?? 1);
-
-function loadLocalEnvironment() {
-  for (const file of [".env.local", ".env"]) {
-    if (existsSync(file)) {
-      process.loadEnvFile(file);
-    }
-  }
-}

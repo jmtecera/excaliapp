@@ -23,6 +23,7 @@ declare global {
 }
 
 const TURNSTILE_SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
 type TurnstileChallengeProps = {
   siteKey: string;
   onToken: (token: string) => void;

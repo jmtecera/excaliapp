@@ -1,15 +1,20 @@
 {
   "name": "@excaliapp/rooms",
   "version": "0.1.0",
+  "description": "Shared Excalidraw board rooms with presence, optional PIN access, and a synchronized Pomodoro timer.",
+  "license": "MIT",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "build": "vite build",
     "db:push": "node scripts/push-migrations.mjs",
     "dev": "vite",
     "dev:api": "node server/sync-server.js",
     "preview": "vite preview",
-    "test": "node --test server/supabase.test.js",
+    "test": "node --test server/*.test.js",
     "typecheck": "tsc --project tsconfig.json",
     "check": "pnpm test && pnpm typecheck && pnpm build",
     "vercel-build": "node scripts/vercel-build.mjs"

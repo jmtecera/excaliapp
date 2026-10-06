@@ -1,20 +1,3 @@
-import {
-  createRoom,
-  getErrorResponse,
-  readRequestBody,
-  sendJson,
-} from "../../server/supabase.js";
+import { handleCreateRoom } from "../../server/handlers.js";
 
-export default async function handler(request, response) {
-  if (request.method !== "POST") {
-    sendJson(response, 405, { error: "Method not allowed." });
-    return;
-  }
-
-  try {
-    sendJson(response, 201, await createRoom(await readRequestBody(request), request));
-  } catch (error) {
-    const result = getErrorResponse(error);
-    sendJson(response, result.status, result.body);
-  }
-}
+export default handleCreateRoom;
