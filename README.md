@@ -1,8 +1,40 @@
-# Excaliapp Rooms
+<p align="center">
+  <img src="public/assets/logo.png" alt="Excaliapp Rooms logo" width="72" height="72">
+</p>
 
-Shared rooms for [Excalidraw](https://excalidraw.com) boards. A room has a short code (`ABC-123`), a shared list of boards, live participant presence, an optional PIN, and a Pomodoro timer that stays in sync for everyone in the room.
+<h1 align="center">Excaliapp Rooms</h1>
 
-The interface is available in English and Spanish, with dark, light, and system themes.
+<p align="center">
+  Shared rooms for <a href="https://excalidraw.com">Excalidraw</a> boards, with a simple room code.
+  <br>
+  <a href="https://excali.app"><strong>excali.app</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/jmtecera/excaliapp/actions/workflows/check.yml"><img src="https://github.com/jmtecera/excaliapp/actions/workflows/check.yml/badge.svg" alt="Check"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/jmtecera/excaliapp" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/SolidJS-2C4F7C?logo=solid&logoColor=white" alt="SolidJS">
+  <img src="https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white" alt="Supabase">
+  <img src="https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white" alt="Vercel">
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/landing-dark.png">
+    <img src="docs/landing-light.png" alt="Excaliapp Rooms landing page" width="900">
+  </picture>
+</p>
+
+A room has a short code (`ABC-123`), a shared list of boards, live participant presence, an optional PIN, and a Pomodoro timer that stays in sync for everyone in the room.
+
+## Features
+
+- **Room codes**: start a room in one click and share a memorable `ABC-123` code instead of long links.
+- **Shared boards**: keep every Excalidraw board for a project in one list that updates live for everyone.
+- **Presence**: see who is in the room right now, with Gravatar avatars.
+- **Optional PIN**: lock a room behind a PIN; collaboration links (which carry encryption keys) are only shared after access is granted.
+- **Synced Pomodoro**: a focus timer that starts, pauses and resets for the whole room at once.
+- **English and Spanish**, with dark, light, and system themes.
 
 ## Stack
 
